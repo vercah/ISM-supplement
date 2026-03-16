@@ -1,6 +1,6 @@
 # ISM-supplement
 
-Supplementary material and experimental pipelines for the ISM paper.
+Supplementary material and experimental pipelines for the paper "Why phylogenies compress so well: combinatorial guarantees under the Infinite Sites Model".
 
 ## Running the experimental pipeline
 
@@ -32,5 +32,3 @@ The pipeline requires the following tools to be installed and available in your 
    cd experiments/example_pipeline
    bash RunScript
    ```
-
-   This launches the Snakemake workflow with 32 parallel jobs and Conda environment support.

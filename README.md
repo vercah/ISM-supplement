@@ -32,3 +32,5 @@ The pipeline requires the following tools to be installed and available in your 
    cd experiments/example_pipeline
    bash RunScript
    ```
+
+   All results will be generated in the `11_runs/` directory.

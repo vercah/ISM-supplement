@@ -1,0 +1,10 @@
+/mnt/lustre/helios-home/hendrver/ISM-supplement/experiments/example_pipeline/01_datasets/../../minigono/GCGS0003.fa
+/mnt/lustre/helios-home/hendrver/ISM-supplement/experiments/example_pipeline/01_datasets/../../minigono/GCGS0002.fa
+/mnt/lustre/helios-home/hendrver/ISM-supplement/experiments/example_pipeline/01_datasets/../../minigono/GCGS0010.fa
+/mnt/lustre/helios-home/hendrver/ISM-supplement/experiments/example_pipeline/01_datasets/../../minigono/GCGS0007.fa
+/mnt/lustre/helios-home/hendrver/ISM-supplement/experiments/example_pipeline/01_datasets/../../minigono/GCGS0008.fa
+/mnt/lustre/helios-home/hendrver/ISM-supplement/experiments/example_pipeline/01_datasets/../../minigono/GCGS0006.fa
+/mnt/lustre/helios-home/hendrver/ISM-supplement/experiments/example_pipeline/01_datasets/../../minigono/GCGS0009.fa
+/mnt/lustre/helios-home/hendrver/ISM-supplement/experiments/example_pipeline/01_datasets/../../minigono/GCGS0004.fa
+/mnt/lustre/helios-home/hendrver/ISM-supplement/experiments/example_pipeline/01_datasets/../../minigono/GCGS0005.fa
+/mnt/lustre/helios-home/hendrver/ISM-supplement/experiments/example_pipeline/01_datasets/../../minigono/GCGS0001.fa

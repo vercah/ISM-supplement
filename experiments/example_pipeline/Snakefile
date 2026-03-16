@@ -3,7 +3,7 @@ import glob
 import numpy as np
 # Parameters
 k_values = [31] #15, 18, 23, 31
-g_values = ["ngono"] 
+g_values = ["minigono"] 
 matrix_types = ["kmer", "unitig"]
 dataset_sizes = {
     g: sum(1 for _ in open(f"01_datasets/{g}.txt"))

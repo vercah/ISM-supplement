@@ -1,0 +1,5 @@
+k=31
+num_colors=10
+num_unitigs=287
+num_color_sets=29
+num_kmers=25180

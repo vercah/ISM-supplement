@@ -1,6 +1,5 @@
 import os
-import glob
-import numpy as np
+
 # Parameters
 k_values = [31] #15, 18, 23, 31
 g_values = ["minigono"] 
@@ -10,19 +9,11 @@ dataset_sizes = {
     for g in g_values
 }
 
-base_N = np.unique(np.round(np.logspace(np.log10(2), np.log10(10000), num=20))).astype(int).tolist()
-all_sizes = [dataset_sizes[g] for g in g_values]
-global_N = sorted(set(base_N + all_sizes))
-
-#N_values = {g: sorted(set(n for n in global_N if n <= dataset_sizes[g])) for g in g_values}
 N_values = {g: [dataset_sizes[g]] for g in g_values}
-#N_values = {g: {50} for g in g_values}
-#print("global N up to 2000:", [n for n in global_N if n <=2000])
 
 rule all:
     input:
         [f"11_runs/{g}_{order}_k{k}_N{n}_{matrix}.runs" for g in g_values for k in k_values for n in N_values[g] for order in ["upgma", "optimal", "randomized", "nj", "worst"] for matrix in matrix_types],
-        #[f"07_ham_dists/{g}_k{k}_{matrix}.dists.txt.xz" for g in g_values for k in k_values for matrix in matrix_types],
 
 rule randomization:
     input:
@@ -126,22 +117,10 @@ rule run_attotree:
         attotree -t {threads} -m {wildcards.method} -L {input.selection} -V > {output.nw}
    """
 
-#------------- TODO doresit ----------------
-rule symlink_tree:
-    input:
-        nw="01_datasets/{dataset}.nw"
-    output:
-        nw="09_trees/{dataset}_{method}_N{N}.nw",
-    wildcard_constraints:
-        method=r"(nj|upgma)"
-    shell:"""
-        attotree -m {wildcards.method} -V $(cat {input.selection}) > {output.nw}
-   """
-
 #--------------------------------------
 #-----------------ORDERS---------------------
 #--------------------------------------
-rule get_tree_order: # pro vsechny k se bere stejne poradi z attotree
+rule get_tree_order:
     input:
         nw="09_trees/{dataset}_{method}_N{N}.nw",
     output:
@@ -172,6 +151,7 @@ rule extract_tsp_order:
     shell:"""
         ./_extract_path_from_tsp_solution.py {input.tsp} {input.sol} > {output.order}
     """
+
 #--------------------------------------
 #-----------------FINAL STATS---------------------
 #--------------------------------------
@@ -192,14 +172,3 @@ rule compute_final_runs:
             ) \
             --out {output.run}
     """
-
-#rule compute_histograms:
-#    input:
-#        pres_abs_matr="06_matrices/{dataset}_k{k}.pres_abs.tsv.xz",
-#        order="10_orders/{dataset}_{order}_k{k}_N{N}.txt",
-#    output:
-#        run="11_runs/{dataset}_{order}_k{k}_N{N}.hist",
-#    shell:"""
-#       ./_evaluate_histogram.py {input.pres_abs_matr} {input.order}  --outfiles {output.run}
-
-#    """

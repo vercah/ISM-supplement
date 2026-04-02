@@ -1,4 +1,4 @@
-#!/mnt/lustre/helios-home/hendrver/miniconda3/envs/stromecky/bin/python
+#!/usr/bin/env python3
 from tqdm import tqdm
 import numpy as np
 import sys

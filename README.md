@@ -125,3 +125,7 @@ snakemake -j 32 --resources concurrency=1 --latency-wait 30 --rerun-incomplete -
 ```
 
 All results will be generated in the `11_runs/` directory.
+
+## Precomputed results
+
+The file `final_data_1k.tsv` contains the aggregated results used to produce the figures and tables in the paper.

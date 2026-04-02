@@ -20,7 +20,11 @@ The following tools must be installed and available in your `PATH`:
 
 - **[fulgor](https://github.com/jermp/fulgor)** — colored compacted de Bruijn graph index
 
-  Build from source following the instructions in the [fulgor repository](https://github.com/jermp/fulgor).
+  Build from source following the instructions in the [fulgor repository](https://github.com/jermp/fulgor). After building, add the binary to your `PATH`, e.g.:
+
+  ```bash
+  export PATH="/path/to/fulgor/build:$PATH"
+  ```
 
 - **[attotree](https://github.com/karel-brinda/attotree)** — rapid phylogenetic tree construction
 
@@ -30,7 +34,13 @@ The following tools must be installed and available in your `PATH`:
 
 - **[Concorde](https://www.math.uwaterloo.ca/tsp/concorde.html)** — TSP solver
 
-  Must be installed manually. Download from the [Concorde website](https://www.math.uwaterloo.ca/tsp/concorde.html) and ensure the `concorde` binary is in your `PATH`.
+  Must be installed manually. Download from the [Concorde website](https://www.math.uwaterloo.ca/tsp/concorde.html) and ensure the `concorde` binary is in your `PATH`. For example, if you built Concorde in `~/concorde/TSP`:
+
+  ```bash
+  export PATH="$HOME/concorde/TSP:$PATH"
+  ```
+
+  You can add this line to your `~/.bashrc` to make it permanent.
 
 ### Python packages
 

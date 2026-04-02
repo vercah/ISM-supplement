@@ -1,4 +1,4 @@
-#!/mnt/lustre/helios-home/hendrver/miniconda3/envs/stromecky/bin/python
+#!/usr/bin/env python3
 
 import os, sys, argparse
 import numpy as np

@@ -60,7 +60,7 @@ pip install snakemake-minimal attotree numpy pandas joblib tqdm xopen progressba
 
 ## Running the experimental pipeline
 
-The example pipeline is located in `experiments/example_pipeline/`.
+The example pipeline is located in `experiments/pipeline/`.
 
 ### Step 0: Clone the repository
 
@@ -77,12 +77,12 @@ conda activate ism
 
 ### Step 1: Generate the dataset file
 
-The pipeline needs a text file listing absolute paths to input genomes (one per line). The included example dataset is `minigono` (located in `experiments/datasets/minigono/`).
+The pipeline needs a text file listing absolute paths to input genomes (one per line). The included example dataset is `minigono` (located in `experiments/data/minigono/`).
 
 To generate the dataset file, run from the `01_datasets/` directory:
 
 ```bash
-cd experiments/example_pipeline/01_datasets
+cd experiments/pipeline/01_datasets
 ./generate_data.sh minigono
 ```
 
@@ -90,16 +90,16 @@ This creates `minigono.txt` with absolute paths to the genome files.
 
 #### Using your own data
 
-You can add your own datasets by placing a folder with genome files (`.fa`, `.fasta`, or `.fna`) into `experiments/datasets/`. Then generate the dataset file by passing the folder name:
+You can add your own datasets by placing a folder with genome files (`.fa`, `.fasta`, or `.fna`) into `experiments/data/`. Then generate the dataset file by passing the folder name:
 
 ```bash
-cd experiments/example_pipeline/01_datasets
+cd experiments/pipeline/01_datasets
 ./generate_data.sh my_dataset
 ```
 
 ### Step 2: Configure pipeline parameters
 
-The pipeline parameters are defined at the top of `experiments/example_pipeline/Snakefile`:
+The pipeline parameters are defined at the top of `experiments/pipeline/Snakefile`:
 
 - **`k_values`** — list of k-mer sizes (default: `[31]`)
 - **`g_values`** — list of dataset names (default: `["minigono"]`)
@@ -110,17 +110,17 @@ The pipeline generates results for the Cartesian product of all parameter combin
 
 ### Step 3: Run the pipeline
 
-From the `experiments/example_pipeline/` directory, either run the provided script:
+From the `experiments/pipeline/` directory, either run the provided script:
 
 ```bash
-cd experiments/example_pipeline
+cd experiments/pipeline
 ./RunScript
 ```
 
 Or run Snakemake directly with the same flags:
 
 ```bash
-cd experiments/example_pipeline
+cd experiments/pipeline
 snakemake -j 32 --resources concurrency=1 --latency-wait 30 --rerun-incomplete --keep-going --show-failed-logs --reason --use-conda
 ```
 

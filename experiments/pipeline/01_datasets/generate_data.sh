@@ -3,14 +3,14 @@ set -euo pipefail
 
 if [ $# -ne 1 ]; then
     echo "Usage: $0 <dataset_name>"
-    echo "  dataset_name: name of a folder in experiments/datasets/"
+    echo "  dataset_name: name of a folder in experiments/data/"
     echo "  Example: $0 minigono"
     exit 1
 fi
 
 DATASET="$1"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-DATASETS_DIR="$(cd "$SCRIPT_DIR/../../datasets" && pwd)"
+DATASETS_DIR="$(cd "$SCRIPT_DIR/../../data" && pwd)"
 
 if [ ! -d "$DATASETS_DIR/$DATASET" ]; then
     echo "Error: dataset directory '$DATASETS_DIR/$DATASET' does not exist."

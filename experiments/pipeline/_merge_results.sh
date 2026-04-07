@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 indir="$1"
 if [ -z "$indir" ]; then

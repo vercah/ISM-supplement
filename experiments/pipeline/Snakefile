@@ -57,8 +57,13 @@ rule dump_fulgor_files:
         sets="05_dumps/{dataset}_k{k}.color_sets.txt",
         meta="05_dumps/{dataset}_k{k}.metadata.txt",
         unitigs="05_dumps/{dataset}_k{k}.unitigs.fa",
+    params:
+        prefix="04_indices/{dataset}_k{k}"
     shell:"""
-        fulgor dump -i {input.fur} -o 05_dumps/{wildcards.dataset}_k{wildcards.k}
+        fulgor dump -i {input.fur}
+        mv "{params.prefix}.color_sets.txt" {output.sets}
+        mv "{params.prefix}.metadata.txt" {output.meta}
+        mv "{params.prefix}.unitigs.fa" {output.unitigs}
     """
 
 rule generate_distances_from_dump:

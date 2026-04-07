@@ -116,7 +116,7 @@ if [[ ! -d "$CONCORDE_DIR" ]]; then
 fi
 
 JOBS="$(cpu_count)"
-export CFLAGS="${CFLAGS:--fPIC -O2 -g -std=gnu89}"
+export CFLAGS="${CFLAGS:--fPIC -O3 -g -std=gnu89}"
 
 echo "Configuring Concorde ..."
 (
@@ -152,4 +152,3 @@ fi
 echo
 echo "Smoke test:"
 echo "  ./concorde -s 99 -k 100"
-

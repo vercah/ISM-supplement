@@ -1,5 +1,23 @@
 # ISM-supplement
 
+
+<!-- vim-markdown-toc GFM -->
+
+* [Prerequisites](#prerequisites)
+    * [Setting up the environment](#setting-up-the-environment)
+    * [Concorde TSP solver](#concorde-tsp-solver)
+* [Running the pipeline](#running-the-pipeline)
+    * [Step 1: Generate the dataset file](#step-1-generate-the-dataset-file)
+        * [Using your own data](#using-your-own-data)
+    * [Step 2: Configure pipeline parameters](#step-2-configure-pipeline-parameters)
+    * [Step 3: Run the pipeline](#step-3-run-the-pipeline)
+* [Precomputed results](#precomputed-results)
+
+<!-- vim-markdown-toc -->
+
+
+## Intro
+
 Supplementary material and experimental pipelines for the paper:
 
 > **Why phylogenies compress so well: combinatorial guarantees under the Infinite Sites Model**
@@ -21,34 +39,24 @@ conda activate ism
 
 ### Concorde TSP solver
 
-[Concorde](https://www.math.uwaterloo.ca/tsp/concorde.html) must be installed manually. Download from the [Concorde website](https://www.math.uwaterloo.ca/tsp/concorde/downloads/downloads.htm) and ensure the `concorde` binary is in your `PATH`. For example, if you built Concorde in `~/concorde/TSP`:
+[Concorde](https://www.math.uwaterloo.ca/tsp/concorde.html) is installed via the helper script in `bin/`. The pipeline calls `bin/concorde` directly, so no `PATH` changes are required.
 
 ```bash
-export PATH="$HOME/concorde/TSP:$PATH"
+make -C bin
 ```
 
-You can add this line to your `~/.bashrc` to make it permanent.
+This downloads, builds, and places the `concorde` binary in `bin/concorde`.
 
-## Running the experimental pipeline
+## Running the pipeline
 
 The example pipeline is located in `experiments/pipeline/`.
 
-### Step 0: Clone the repository
-
-```bash
-git clone https://github.com/vercah/ISM-supplement.git
-cd ISM-supplement
-```
-
-If using a Conda environment, activate it before proceeding:
-
-```bash
-conda activate ism
-```
 
 ### Step 1: Generate the dataset file
 
-The pipeline needs a text file listing absolute paths to input genomes (one per line). The included example dataset is `minigono` (located in `experiments/data/minigono/`).
+The pipeline needs a text file listing absolute paths to input genomes (one per line).
+
+**Minigono example:** The included example dataset is `minigono` (located in `experiments/data/minigono/`).
 
 To generate the dataset file, run from the `01_datasets/` directory:
 
@@ -59,7 +67,7 @@ cd experiments/pipeline/01_datasets
 
 This creates `minigono.txt` with absolute paths to the genome files.
 
-#### Using your own data
+**Using your own data**
 
 You can add your own datasets by placing a folder with genome files (`.fa`, `.fasta`, or `.fna`) into `experiments/data/`. Then generate the dataset file by passing the folder name:
 
@@ -81,18 +89,11 @@ The pipeline generates results for the Cartesian product of all parameter combin
 
 ### Step 3: Run the pipeline
 
-From the `experiments/pipeline/` directory, either run the provided script:
+Run the pipeline through `make`:
 
 ```bash
 cd experiments/pipeline
-./RunScript
-```
-
-Or run Snakemake directly with the same flags:
-
-```bash
-cd experiments/pipeline
-snakemake -j 32 --resources concurrency=1 --latency-wait 30 --rerun-incomplete --keep-going --show-failed-logs --reason --use-conda
+make
 ```
 
 All results will be generated in the `11_runs/` directory.

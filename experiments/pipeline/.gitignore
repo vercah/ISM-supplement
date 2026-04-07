@@ -1,3 +1,4 @@
+01_datasets/*.txt
 04_indices/
 07_ham_dists/
 .snakemake/

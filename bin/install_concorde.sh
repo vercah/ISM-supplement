@@ -121,7 +121,7 @@ export CFLAGS="${CFLAGS:--fPIC -O2 -g -std=gnu89}"
 echo "Configuring Concorde ..."
 (
   cd "$CONCORDE_DIR"
-  ./configure --with-qsopt="$QSOPT_DIR" "${CONFIGURE_EXTRA[@]}"
+  ./configure --with-qsopt="$QSOPT_DIR" ${CONFIGURE_EXTRA[@]+"${CONFIGURE_EXTRA[@]}"}
 )
 
 echo "Building Concorde with $JOBS job(s) ..."

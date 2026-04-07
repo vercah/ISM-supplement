@@ -2,4 +2,4 @@
 set -euo pipefail
 
 ulimit -n 4096
-snakemake -j 32 --resources concurrency=1 --latency-wait 30 --rerun-incomplete --keep-going --show-failed-logs --reason --use-conda
+snakemake -j 32 --resources concurrency=1 --latency-wait 30 --rerun-incomplete --keep-going --show-failed-logs --use-conda

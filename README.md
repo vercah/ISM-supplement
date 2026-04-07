@@ -8,55 +8,26 @@ Supplementary material and experimental pipelines for the paper:
 
 ## Prerequisites
 
-### External tools
+### Setting up the environment
 
-The following tools must be installed and available in your `PATH`:
-
-- **[Snakemake](https://snakemake.readthedocs.io/)** — workflow management system
-
-  ```bash
-  pip install snakemake-minimal
-  ```
-
-- **[fulgor](https://github.com/jermp/fulgor)** — colored compacted de Bruijn graph index
-
-  Build from source following the instructions in the [fulgor repository](https://github.com/jermp/fulgor). After building, add the binary to your `PATH`, e.g.:
-
-  ```bash
-  export PATH="/path/to/fulgor/build:$PATH"
-  ```
-
-- **[attotree](https://github.com/karel-brinda/attotree)** — rapid phylogenetic tree construction
-
-  ```bash
-  pip install attotree
-  ```
-
-- **[Concorde](https://www.math.uwaterloo.ca/tsp/concorde.html)** — TSP solver
-
-  Must be installed manually. Download from the [Concorde website](https://www.math.uwaterloo.ca/tsp/concorde.html) and ensure the `concorde` binary is in your `PATH`. For example, if you built Concorde in `~/concorde/TSP`:
-
-  ```bash
-  export PATH="$HOME/concorde/TSP:$PATH"
-  ```
-
-  You can add this line to your `~/.bashrc` to make it permanent.
-
-### Python packages
+Create a dedicated Conda environment with all dependencies using [Bioconda](https://bioconda.github.io/):
 
 ```bash
-pip install numpy pandas joblib tqdm xopen progressbar2 ete3
-```
-
-### Using a Conda environment (recommended)
-
-It may be useful to create a dedicated Conda environment to avoid dependency conflicts:
-
-```bash
-conda create -n ism python=3.10
+conda create -n ism -c bioconda -c conda-forge \
+    snakemake fulgor attotree \
+    numpy pandas joblib tqdm xopen progressbar2 ete3
 conda activate ism
-pip install snakemake-minimal attotree numpy pandas joblib tqdm xopen progressbar2 ete3
 ```
+
+### Concorde TSP solver
+
+[Concorde](https://www.math.uwaterloo.ca/tsp/concorde.html) must be installed manually. Download from the [Concorde website](https://www.math.uwaterloo.ca/tsp/concorde/downloads/downloads.htm) and ensure the `concorde` binary is in your `PATH`. For example, if you built Concorde in `~/concorde/TSP`:
+
+```bash
+export PATH="$HOME/concorde/TSP:$PATH"
+```
+
+You can add this line to your `~/.bashrc` to make it permanent.
 
 ## Running the experimental pipeline
 

@@ -4,5 +4,8 @@ set -e
 set -o pipefail
 set -u
 
-time ../../bin/concorde instance_ngono_best/instance.tsp
+d=$(mktemp -d)
+p=$(pwd)
+
+(cd $d; time $p/../../bin/concorde $p/instance_ngono_best/instance.tsp)
 

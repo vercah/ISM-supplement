@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from tqdm import tqdm
 import numpy as np
 import sys
 import argparse
@@ -57,11 +56,11 @@ def compute_streaming_distances_parallel(fn, n_cores, chunk_size=1000):
             for chunk in chunked_iterable(fo, chunk_size)
         )
 
-        for local in tqdm(results, desc="Processing chunks"):
+        for local in results:
             merged += local
             del local
 
-    tqdm.write("Matrices merged, started writing", file=sys.stderr)
+    print("Matrices merged, started writing", file=sys.stderr)
     for i in range(num_genomes):
         for j in range(i + 1, num_genomes):
             print(f"{names[i]}\t{names[j]}\t{merged[i, j]}")

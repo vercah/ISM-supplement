@@ -35,7 +35,7 @@ Create a dedicated Conda environment with all dependencies using [Bioconda](http
 conda create -n ism -c bioconda -c conda-forge \
     python=3.12 \
     snakemake fulgor attotree \
-    numpy pandas joblib tqdm xopen progressbar2 ete3
+    numpy pandas joblib xopen progressbar2 ete3
 conda activate ism
 ```
 

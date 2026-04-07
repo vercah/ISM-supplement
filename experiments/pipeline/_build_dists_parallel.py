@@ -3,7 +3,6 @@
 import os, sys, argparse
 import numpy as np
 from joblib import Parallel, delayed
-from tqdm import tqdm
 import time, datetime
 
 def load_names(filenames_file):

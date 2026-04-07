@@ -1,5 +1,11 @@
 import os
 
+CONCORDE_BIN = os.path.abspath(
+    os.path.join(workflow.basedir, "..", "..", "bin", "concorde")
+)
+if not os.path.exists(CONCORDE_BIN):
+    raise FileNotFoundError(f"Concorde binary not found at {CONCORDE_BIN}")
+
 # Parameters
 k_values = [31] #15, 18, 23, 31
 g_values = ["minigono"] 
@@ -95,9 +101,11 @@ rule run_concorde:
     output:
         sol="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/instance.sol",
         log="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/log.txt"
+    params:
+        concorde=CONCORDE_BIN
     shell:"""
         cd $(dirname {input.tsp})/ \
-            && concorde -o instance.sol instance.tsp 2>&1 \
+            && "{params.concorde}" -o instance.sol instance.tsp 2>&1 \
             | tee log.txt
         """
 

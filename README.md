@@ -32,7 +32,7 @@ Supplementary material and experimental pipelines for the paper:
 Create a dedicated Conda environment with all dependencies using [Bioconda](https://bioconda.github.io/):
 
 ```bash
-conda create -n ism -c bioconda -c conda-forge \
+conda create -n ism -c bioconda -c conda-forge --override-channels \
     python=3.12 \
     snakemake fulgor attotree \
     numpy pandas joblib xopen progressbar2 ete3

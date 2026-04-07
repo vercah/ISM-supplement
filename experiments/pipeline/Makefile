@@ -1,4 +1,4 @@
-.PHONY: all help clean cleanall view
+.PHONY: all help clean cleanall view report
 
 SHELL=/usr/bin/env bash -eo pipefail
 
@@ -22,6 +22,9 @@ help: ## Print help messages
 			-e 's/: /:/g' \
 			-e 's/^#\(.*\)#/\\x1b[90m\1\\x1b[m/' \
 		| column -c2 -t -s : )"
+
+report:
+	snakemake --report report.html
 
 clean: ## Clean
 

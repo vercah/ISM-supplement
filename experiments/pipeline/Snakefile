@@ -1,3 +1,4 @@
+import glob
 import os
 
 CONCORDE_BIN = os.path.abspath(
@@ -8,7 +9,12 @@ if not os.path.exists(CONCORDE_BIN):
 
 # Parameters
 k_values = [31] #15, 18, 23, 31
-g_values = ["minigono"] 
+dataset_files = sorted(glob.glob(os.path.join("01_datasets", "*.txt")))
+g_values = [os.path.splitext(os.path.basename(path))[0] for path in dataset_files]
+if not g_values:
+    raise FileNotFoundError(
+        "No dataset files found in 01_datasets. Add one or more '*.txt' files first."
+    )
 matrix_types = ["kmer", "unitig"]
 dataset_sizes = {
     g: sum(1 for _ in open(f"01_datasets/{g}.txt"))

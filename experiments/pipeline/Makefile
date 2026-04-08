@@ -27,6 +27,16 @@ report:
 	snakemake --report report.html
 
 clean: ## Clean
+	rm -fv \
+		02_order_randomization/*.txt \
+		03_selection/*.txt \
+		04_indices/*.fur \
+		05_dumps/{*.fa,*.txt} \
+		07_ham_dists/{*.txt,*.xz} \
+		09_trees/*.nw \
+		10_orders/*.txt \
+		11_runs/*.runs
+	rm -vfr 08_tsp/*/
 
 cleanall: clean ## Clean all
 

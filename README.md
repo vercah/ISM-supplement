@@ -21,9 +21,20 @@
 
 Supplementary material and experimental pipelines for the paper:
 
-> **Why phylogenies compress so well: combinatorial guarantees under the Infinite Sites Model**
->
-> bioRxiv preprint: [https://www.biorxiv.org/content/10.64898/2026.03.18.712055v1](https://www.biorxiv.org/content/10.64898/2026.03.18.712055v1)
+> Veronika Hendrychová and Karel Břinda (2026). **Why phylogenies compress so well: combinatorial guarantees under the Infinite Sites Model**. *bioRxiv*. [https://doi.org/10.64898/2026.03.18.712055](https://doi.org/10.64898/2026.03.18.712055)
+
+BibTeX:
+
+```bibtex
+@article{hendrychova2026ism,
+  author = {Veronika Hendrychová and Karel Břinda},
+  title = {Why phylogenies compress so well: combinatorial guarantees under the Infinite Sites Model},
+  journal = {bioRxiv},
+  year = {2026},
+  doi = {10.64898/2026.03.18.712055},
+  url = {https://doi.org/10.64898/2026.03.18.712055}
+}
+```
 
 ## Prerequisites
 

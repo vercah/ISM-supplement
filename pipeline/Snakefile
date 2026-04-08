@@ -74,9 +74,8 @@ rule generate_fulgor_index:
         printf 'threads=%s\n' "{threads}" >> {output.time}
         printf 'command=%s\n' "fulgor build -l {input.txt} -o 04_indices/{wildcards.dataset}_k{wildcards.k} -k {wildcards.k} -m {params.minimizer_size} -d 04_indices/{wildcards.dataset}_k{wildcards.k}_tmp -g {params.ram_gib} -t {threads} --verbose --check" >> {output.time}
         printf 'start_utc=%s\n' "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> {output.time}
-        /usr/bin/time -p -o {output.time} -a bash -lc '
         ulimit -n 4096
-        fulgor build \\
+        /usr/bin/time -p -o {output.time} -a fulgor build \\
                 -l {input.txt} \\
                 -o 04_indices/{wildcards.dataset}_k{wildcards.k} \\
                 -k {wildcards.k} \\
@@ -85,7 +84,6 @@ rule generate_fulgor_index:
                 -g {params.ram_gib} \\
                 -t {threads} \\
                 --verbose --check
-        '
         printf 'end_utc=%s\n' "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> {output.time}
         """
 
@@ -107,12 +105,11 @@ rule dump_fulgor_files:
         printf 'cwd=%s\n' "$(pwd)" >> {output.time}
         printf 'command=%s\n' "fulgor dump -i {input.fur}" >> {output.time}
         printf 'start_utc=%s\n' "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> {output.time}
-        /usr/bin/time -p -o {output.time} -a bash -lc '
+        /usr/bin/time -p -o {output.time} -a \
         fulgor dump -i {input.fur}
         mv "{params.prefix}.color_sets.txt" {output.sets}
         mv "{params.prefix}.metadata.txt" {output.meta}
         mv "{params.prefix}.unitigs.fa" {output.unitigs}
-        '
         printf 'end_utc=%s\n' "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> {output.time}
     """
 
@@ -185,11 +182,9 @@ rule run_concorde:
         printf 'cwd=%s\n' "$(pwd)" >> {output.time}
         printf 'command=%s\n' "\"{params.concorde}\" -o instance.sol instance.tsp" >> {output.time}
         printf 'start_utc=%s\n' "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> {output.time}
-        /usr/bin/time -p -o {output.time} -a bash -lc '
         cd $(dirname {input.tsp})/ \
-            && "{params.concorde}" -o instance.sol instance.tsp 2>&1 \
+            && /usr/bin/time -p -o {output.time} -a "{params.concorde}" -o instance.sol instance.tsp 2>&1 \
             | tee log.txt
-        '
         printf 'end_utc=%s\n' "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> {output.time}
         """
 
@@ -216,9 +211,7 @@ rule run_attotree:
         printf 'threads=%s\n' "{threads}" >> {output.time}
         printf 'command=%s\n' "attotree -t {threads} -m {wildcards.method} -L {input.selection} -V" >> {output.time}
         printf 'start_utc=%s\n' "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> {output.time}
-        /usr/bin/time -p -o {output.time} -a bash -lc '
-        attotree -t {threads} -m {wildcards.method} -L {input.selection} -V > {output.nw}
-        '
+        /usr/bin/time -p -o {output.time} -a attotree -t {threads} -m {wildcards.method} -L {input.selection} -V > {output.nw}
         printf 'end_utc=%s\n' "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> {output.time}
    """
 
@@ -273,7 +266,7 @@ rule extract_tsp_order:
         printf 'cwd=%s\n' "$(pwd)" >> {output.time}
         printf 'command=%s\n' "./_extract_path_from_tsp_solution.py {input.tsp} {input.sol}" >> {output.time}
         printf 'start_utc=%s\n' "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> {output.time}
-        /usr/bin/time -p -o {output.time} -a bash -lc './_extract_path_from_tsp_solution.py {input.tsp} {input.sol} > {output.order}'
+        /usr/bin/time -p -o {output.time} -a ./_extract_path_from_tsp_solution.py {input.tsp} {input.sol} > {output.order}
         printf 'end_utc=%s\n' "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> {output.time}
     """
 
@@ -295,8 +288,7 @@ rule compute_final_runs:
         printf 'cwd=%s\n' "$(pwd)" >> {output.time}
         printf 'command=%s\n' "./_evaluate_order_nb_runs.py {input.dists} {input.order} --out {output.run}" >> {output.time}
         printf 'start_utc=%s\n' "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> {output.time}
-        /usr/bin/time -p -o {output.time} -a bash -lc '
-       ./_evaluate_order_nb_runs.py {input.dists} {input.order} \
+        /usr/bin/time -p -o {output.time} -a ./_evaluate_order_nb_runs.py {input.dists} {input.order} \
             --num-rows $(
                 if [ "{wildcards.type}" = "unitig" ]; then
                     grep '^num_unitigs=' 05_dumps/{wildcards.dataset}_k{wildcards.k}.metadata.txt | cut -d= -f2
@@ -305,6 +297,5 @@ rule compute_final_runs:
                 fi
             ) \
             --out {output.run}
-        '
         printf 'end_utc=%s\n' "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> {output.time}
     """

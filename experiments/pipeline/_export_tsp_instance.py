@@ -51,8 +51,7 @@ def create_matrix_from_file(fn, sel, worst):
     keys = set()
     with open(sel, "r") as f:
         selected_names = set(
-            os.path.splitext(line.strip().split("/")[-1])[0] for line in f
-        )
+            os.path.splitext(line.strip().split("/")[-1])[0] for line in f)
     # print(selected_names)
     with xopen(fn) as fo:
         for x in fo:
@@ -102,6 +101,7 @@ def create_matrix_from_file(fn, sel, worst):
 
     return keys, arr
 
+
 def process(fn, out_optimal, out_worst, sel):
     keys, arr = create_matrix_from_file(fn, sel, False)
     with open(f"{out_optimal}", "w") as fo:
@@ -111,8 +111,10 @@ def process(fn, out_optimal, out_worst, sel):
     with open(f"{out_worst}", "w") as fo:
         write_tsp_instance(worst_arr, keys, fo)
 
+
 def main():
-    parser = argparse.ArgumentParser(description="generate optimal and worst case TSP instances")
+    parser = argparse.ArgumentParser(
+        description="generate optimal and worst case TSP instances")
     parser.add_argument("fn", metavar="input.txt", help="distance file")
     parser.add_argument("sel", help="selection file")
     parser.add_argument(

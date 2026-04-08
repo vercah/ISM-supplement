@@ -36,11 +36,11 @@ def process(inst_fn, sol_fn):
     #        f"order={len(order)}, keys={len(keys)}")
     sorted_keys = [keys[i] for i in order]
     assert sorted_keys[0] == "_DUMMY_CITY_SEPARATOR_", sorted_keys
-    
+
     real_tour = [
         name for name in sorted_keys if not name.startswith("_DUMMY_")
     ]
-    
+
     print(*real_tour, sep="\n")
 
 

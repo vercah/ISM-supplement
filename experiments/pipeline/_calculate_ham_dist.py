@@ -7,7 +7,8 @@ from collections import defaultdict
 from joblib import Parallel, delayed
 import multiprocessing
 
-n_cores = multiprocessing.cpu_count() 
+n_cores = multiprocessing.cpu_count()
+
 
 def process_chunk(lines, num_genomes):
     local_dists = np.zeros((num_genomes, num_genomes), dtype=np.int64)
@@ -16,6 +17,7 @@ def process_chunk(lines, num_genomes):
         xormatr = bits[:, None] ^ bits[None, :]
         local_dists += np.triu(xormatr, k=1).astype(np.int64)
     return local_dists
+
 
 def chunked_iterable(iterable, size):
     chunk = []
@@ -53,8 +55,7 @@ def compute_streaming_distances_parallel(fn, n_cores, chunk_size=1000):
 
         results = Parallel(n_jobs=n_cores, return_as="generator")(
             delayed(process_chunk)(chunk, num_genomes)
-            for chunk in chunked_iterable(fo, chunk_size)
-        )
+            for chunk in chunked_iterable(fo, chunk_size))
 
         for local in results:
             merged += local
@@ -65,17 +66,18 @@ def compute_streaming_distances_parallel(fn, n_cores, chunk_size=1000):
         for j in range(i + 1, num_genomes):
             print(f"{names[i]}\t{names[j]}\t{merged[i, j]}")
 
+
 def main():
-    parser = argparse.ArgumentParser(description="Compute all pairwise Hamming distances between columns")
+    parser = argparse.ArgumentParser(
+        description="Compute all pairwise Hamming distances between columns")
     parser.add_argument("fn", help="matrix file (rows=k-mers, cols=genomes)")
     args = parser.parse_args()
 
-#    mat, names = load_matrix(args.fn)
+    #    mat, names = load_matrix(args.fn)
 
     #compute_all_pairs(mat, names)
     compute_streaming_distances_parallel(args.fn, n_cores, 10000)
-    
+
 
 if __name__ == "__main__":
     main()
-

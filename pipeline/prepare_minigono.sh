@@ -4,6 +4,6 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-find "$(realpath "$SCRIPT_DIR/../data/minigono")" -name '*.fa' \
+find "$(realpath "$SCRIPT_DIR/../data/minigono")" -name '*.fa.gz' \
   | sort \
   > "$(realpath "$SCRIPT_DIR/01_datasets")/minigono.txt"

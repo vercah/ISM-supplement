@@ -1,8 +1,9 @@
 import glob
 import os
 
+REPO_ROOT = os.path.abspath(os.path.join(workflow.basedir, ".."))
 CONCORDE_BIN = os.path.abspath(
-    os.path.join(workflow.basedir, "..", "..", "bin", "concorde")
+    os.path.join(REPO_ROOT, "bin", "concorde")
 )
 if not os.path.exists(CONCORDE_BIN):
     raise FileNotFoundError(f"Concorde binary not found at {CONCORDE_BIN}")

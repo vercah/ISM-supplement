@@ -5,6 +5,8 @@ import numpy as np
 from joblib import Parallel, delayed
 import time, datetime
 
+from _sample_name import canonical_sample_name
+
 
 def load_names(filenames_file):
     # returns 0-based list: names[0] is color_id=0
@@ -13,7 +15,7 @@ def load_names(filenames_file):
         for line in f:
             line = line.strip()
             if line and not line.startswith("#"):
-                names.append(os.path.basename(line))
+                names.append(canonical_sample_name(line))
     return names
 
 

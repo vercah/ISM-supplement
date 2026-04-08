@@ -51,38 +51,58 @@ This downloads, builds, and places the `concorde` binary in `bin/concorde`.
 
 ## Running the pipeline
 
-The example pipeline is located in `experiments/pipeline/`.
+The example pipeline is located in `pipeline/`.
 
 
 ### Step 1: Prepare dataset file(s)
 
-The pipeline auto-detects every `*.txt` file in `experiments/pipeline/01_datasets/`. Each such file is treated as one dataset and must contain absolute paths to input genomes, one per line.
+The pipeline auto-detects every `*.txt` file in `pipeline/01_datasets/`. Each such file is treated as one dataset and must contain absolute paths to input genomes, one per line.
+
+Supported genome inputs are `.fa`, `.fasta`, `.fna`, and their `.gz` variants.
 
 #### Minigono example
 
-The bundled example dataset is `minigono`, stored in `experiments/data/minigono/`. To prepare its file-of-filenames, run:
+The bundled example dataset is `minigono`, stored in `data/minigono/`. `prepare_minigono.sh` scans that directory for supported FASTA files and writes a dataset manifest:
 
 ```bash
-cd experiments/pipeline
+cd pipeline
 ./prepare_minigono.sh
 ```
 
-This creates `experiments/pipeline/01_datasets/minigono.txt`.
+This creates `pipeline/01_datasets/minigono.txt`.
 
 **Using your own data**
 
-You can add your own datasets by placing a folder with genome files (`.fa`, `.fasta`, or `.fna`) into `experiments/data/`. Then generate the corresponding file-of-filenames in `01_datasets/`:
+`link_genomes.sh` supports three input modes:
+
+- a dataset folder name under `data/`
+- a directory path containing FASTA files
+- one or more explicit FASTA paths, including shell-expanded globs
+
+If you place a folder with genome files in `data/`, you can generate the corresponding file-of-filenames in `01_datasets/` like this:
 
 ```bash
-cd experiments/pipeline/01_datasets
-./generate_data.sh my_dataset
+cd pipeline/01_datasets
+./link_genomes.sh my_dataset
 ```
 
-This creates `experiments/pipeline/01_datasets/my_dataset.txt`. Any dataset `.txt` file present in `01_datasets/` will be picked up automatically when the pipeline runs.
+This creates `pipeline/01_datasets/my_dataset.txt`.
+
+You can also point `link_genomes.sh` directly at an external directory or an explicit shell-expanded file list:
+
+```bash
+cd pipeline/01_datasets
+./link_genomes.sh ~/tmp/neisseria_gonorrhoeae__01
+./link_genomes.sh ~/tmp/neisseria_gonorrhoeae__01/SAM*.fa
+```
+
+In that mode, the dataset name is derived from the common parent directory, so the examples above create `pipeline/01_datasets/neisseria_gonorrhoeae__01.txt`.
+
+Any dataset `.txt` file present in `01_datasets/` will be picked up automatically when the pipeline runs.
 
 ### Step 2: Configure pipeline parameters
 
-The pipeline parameters are defined at the top of `experiments/pipeline/Snakefile`:
+The pipeline parameters are defined at the top of `pipeline/Snakefile`:
 
 - **`k_values`** — list of k-mer sizes (default: `[31]`)
 - **`matrix_types`** — types of presence/absence matrices (default: `["kmer", "unitig"]`)
@@ -95,7 +115,7 @@ The pipeline generates results for the Cartesian product of all parameter combin
 Run the pipeline through `make`:
 
 ```bash
-cd experiments/pipeline
+cd pipeline
 make
 ```
 

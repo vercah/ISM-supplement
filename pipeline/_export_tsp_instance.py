@@ -14,6 +14,8 @@ from pprint import pprint
 import numpy as np
 import pandas as pd
 
+from _sample_name import canonical_sample_name
+
 
 def write_tsp_instance(arr, keys, fo, without_return=True):
     if without_return:
@@ -50,15 +52,14 @@ def create_matrix_from_file(fn, sel, worst):
     d = {}
     keys = set()
     with open(sel, "r") as f:
-        selected_names = set(
-            os.path.splitext(line.strip().split("/")[-1])[0] for line in f)
+        selected_names = set(canonical_sample_name(line) for line in f)
     # print(selected_names)
     with xopen(fn) as fo:
         for x in fo:
             x = x.strip()
             a, b, dist = x.split("\t")
-            a = os.path.splitext(a)[0]
-            b = os.path.splitext(b)[0]
+            a = canonical_sample_name(a)
+            b = canonical_sample_name(b)
             #           print("just read", a, b)
             if a not in selected_names or b not in selected_names:
                 continue

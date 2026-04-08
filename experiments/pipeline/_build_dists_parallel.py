@@ -5,6 +5,7 @@ import numpy as np
 from joblib import Parallel, delayed
 import time, datetime
 
+
 def load_names(filenames_file):
     # returns 0-based list: names[0] is color_id=0
     names = []
@@ -14,6 +15,7 @@ def load_names(filenames_file):
             if line and not line.startswith("#"):
                 names.append(os.path.basename(line))
     return names
+
 
 def load_color_sets(color_sets_file):
     color_sets = {}
@@ -34,6 +36,7 @@ def load_color_sets(color_sets_file):
             color_sets[color_set_id] = colors
     return color_sets
 
+
 def iter_unitigs_info(unitigs_file, k):
     with open(unitigs_file) as f:
         csid = None
@@ -50,6 +53,7 @@ def iter_unitigs_info(unitigs_file, k):
                 if n > 0:
                     yield csid, n
 
+
 def process_batch(batch, num_colors):
     #pid = os.getpid()
     #start_time = datetime.datetime.now().strftime("%H:%M:%S")
@@ -57,7 +61,7 @@ def process_batch(batch, num_colors):
 
     #time.sleep(5)
     local_unitig = np.zeros((num_colors, num_colors), dtype=np.int64)
-    local_kmer   = np.zeros((num_colors, num_colors), dtype=np.int64)
+    local_kmer = np.zeros((num_colors, num_colors), dtype=np.int64)
 
     for ones, n in batch:
         row = np.zeros(num_colors, dtype=np.uint8)
@@ -73,6 +77,7 @@ def process_batch(batch, num_colors):
     #print(f"{end_time} | Process {pid} finished", file=sys.stderr, flush=True)
     return local_unitig, local_kmer
 
+
 def count_kmers(unitigs_file, k, metadata_fn):
     total_kmers = 0
     for csid, n in iter_unitigs_info(unitigs_file, k):
@@ -85,10 +90,12 @@ def count_kmers(unitigs_file, k, metadata_fn):
             f.write(f"num_kmers={total_kmers}\n")
     return total_kmers
 
+
 def subbatch_iterable(batch):
     subbatch_size = 10000
     for i in range(0, len(batch), subbatch_size):
-        yield batch[i:i+subbatch_size]
+        yield batch[i:i + subbatch_size]
+
 
 def preprocess_color_sets(batch, color_sets):
     member_batch = []
@@ -97,14 +104,16 @@ def preprocess_color_sets(batch, color_sets):
         member_batch.append((ones, n))
     return member_batch
 
-def build_and_compute(color_sets, unitigs_file, k, filenames_file, out_path, dataset, total_kmers, cores, batch_size):
+
+def build_and_compute(color_sets, unitigs_file, k, filenames_file, out_path,
+                      dataset, total_kmers, cores, batch_size):
     names = load_names(filenames_file)
     num_colors = len(names)
     kmer_dists = np.zeros((num_colors, num_colors), dtype=np.int64)
     unitig_dists = np.zeros((num_colors, num_colors), dtype=np.int64)
 
     batch = []
-#    pbar = tqdm(desc="Processing kmers", unit="rows", total=total_kmers)
+    #    pbar = tqdm(desc="Processing kmers", unit="rows", total=total_kmers)
     processed_n = 0
     for csid, n in iter_unitigs_info(unitigs_file, k):
         processed_n += n
@@ -113,11 +122,12 @@ def build_and_compute(color_sets, unitigs_file, k, filenames_file, out_path, dat
             #print(f"Started processing color sets of a batch", file=sys.stderr, flush=True)
             member_batch = preprocess_color_sets(batch, color_sets)
             #print(f"Starting parallel", file=sys.stderr, flush=True)
-            for u_matrix, k_matrix in Parallel(n_jobs=cores, backend="threading", return_as="generator")(
-                delayed(process_batch)(subbatch, num_colors)
-                for subbatch in subbatch_iterable(member_batch)):
+            for u_matrix, k_matrix in Parallel(
+                    n_jobs=cores, backend="threading", return_as="generator")(
+                        delayed(process_batch)(subbatch, num_colors)
+                        for subbatch in subbatch_iterable(member_batch)):
                 unitig_dists += u_matrix
-                kmer_dists   += k_matrix
+                kmer_dists += k_matrix
 
             #local_matrices = [process_batch(member_batch, num_colors)]
             #for local_unitig, local_kmer in local_matrices:
@@ -140,11 +150,12 @@ def build_and_compute(color_sets, unitigs_file, k, filenames_file, out_path, dat
         member_batch = preprocess_color_sets(batch, color_sets)
         #local_matrices = [process_batch(member_batch, num_colors)]
         #print(f"Processed last color sets of a batch", file=sys.stderr, flush=True)
-        for u_matrix, k_matrix in Parallel(n_jobs=cores, backend="threading", return_as="generator")(
-            delayed(process_batch)(subbatch, num_colors)
-            for subbatch in subbatch_iterable(member_batch)):
+        for u_matrix, k_matrix in Parallel(
+                n_jobs=cores, backend="threading", return_as="generator")(
+                    delayed(process_batch)(subbatch, num_colors)
+                    for subbatch in subbatch_iterable(member_batch)):
             unitig_dists += u_matrix
-            kmer_dists   += k_matrix
+            kmer_dists += k_matrix
         #local_matrices = Parallel(n_jobs=cores, backend="threading")(
         #    delayed(process_batch)(subbatch, num_colors)
         #        for subbatch in subbatch_iterable(member_batch))
@@ -155,7 +166,7 @@ def build_and_compute(color_sets, unitigs_file, k, filenames_file, out_path, dat
         #if matrices_k:
         #    kmer_dists += np.sum(np.stack(matrices_k), axis=0)
         batch = []
-        
+
     #print(f"Matrices merged, started writing", file=sys.stderr, flush=True)
 
     with open(f"{out_prefix}/{dataset}_k{k}_unitig.dists.txt", "w") as f:
@@ -168,13 +179,17 @@ def build_and_compute(color_sets, unitigs_file, k, filenames_file, out_path, dat
             for j in range(i + 1, num_colors):
                 f.write(f"{names[i]}\t{names[j]}\t{kmer_dists[i, j]}\n")
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("dumpdir", help="directory with fulgor dumps (e.g. 05_dumps)")
+    parser.add_argument("dumpdir",
+                        help="directory with fulgor dumps (e.g. 05_dumps)")
     parser.add_argument("dataset", help="dataset name (e.g. ngono)")
     parser.add_argument("k", type=int, help="k-mer size")
     parser.add_argument("out_prefix", help="output matrix path")
-    parser.add_argument("n_cores", type=int, help="number of cores to parallelize")
+    parser.add_argument("n_cores",
+                        type=int,
+                        help="number of cores to parallelize")
 
     args = parser.parse_args()
 
@@ -185,11 +200,11 @@ if __name__ == "__main__":
     cores = args.n_cores
 
     color_sets_file = f"{dumpdir}/{dataset}_k{k}.color_sets.txt"
-    metadata_file   = f"{dumpdir}/{dataset}_k{k}.metadata.txt"
-    unitigs_file    = f"{dumpdir}/{dataset}_k{k}.unitigs.fa"
-    filenames_file  = f"01_datasets/{dataset}.txt"
+    metadata_file = f"{dumpdir}/{dataset}_k{k}.metadata.txt"
+    unitigs_file = f"{dumpdir}/{dataset}_k{k}.unitigs.fa"
+    filenames_file = f"01_datasets/{dataset}.txt"
 
     kmer_count = count_kmers(unitigs_file, k, metadata_file)
     color_sets = load_color_sets(color_sets_file)
-    build_and_compute(color_sets, unitigs_file, k, filenames_file, out_prefix, dataset, kmer_count, cores, 200000) 
-
+    build_and_compute(color_sets, unitigs_file, k, filenames_file, out_prefix,
+                      dataset, kmer_count, cores, 200000)

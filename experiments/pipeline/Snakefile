@@ -63,6 +63,7 @@ rule generate_fulgor_index:
     threads: 32
     params:
         minimizer_size=lambda wc: min(20, int(wc.k) - 2),
+        ram_gib=12,
     shell:
         """
         ulimit -n 4096
@@ -72,7 +73,7 @@ rule generate_fulgor_index:
                 -k {wildcards.k} \\
                 -m {params.minimizer_size} \\
                 -d 04_indices/{wildcards.dataset}_k{wildcards.k}_tmp \\
-                -g 12 \\
+                -g {params.ram_gib} \\
                 -t {threads} \\
                 --verbose --check
         """

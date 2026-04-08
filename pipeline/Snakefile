@@ -67,6 +67,7 @@ rule generate_fulgor_index:
         ram_gib=12,
     shell:
         """
+        export LD_PRELOAD=/mnt/lustre/helios-home/hendrver/miniconda3/envs/ism/lib/libstdc++.so.6.0.34
         ulimit -n 4096
         fulgor build \\
                 -l {input.txt} \\

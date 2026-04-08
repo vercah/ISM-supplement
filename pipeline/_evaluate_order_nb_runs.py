@@ -11,6 +11,7 @@ from xopen import xopen
 import progressbar
 
 from joblib import Parallel, delayed
+from _sample_name import canonical_sample_name
 # BitVector slower than Numpy
 #from BitVector import BitVector
 
@@ -23,8 +24,8 @@ def load_distances(fn):
     with xopen(fn) as f:
         for line in f:
             a, b, dist = line.strip().split()
-            a = os.path.splitext(os.path.basename(a))[0]
-            b = os.path.splitext(os.path.basename(b))[0]
+            a = canonical_sample_name(a)
+            b = canonical_sample_name(b)
             dist = int(dist)
             if a == b:
                 continue
@@ -47,7 +48,7 @@ def load_order(fn):
     order = []
     with xopen(fn) as f:
         for line in f:
-            name = os.path.splitext(line.strip().split("/")[-1])[0]
+            name = canonical_sample_name(line)
             order.append(name)
     return order
 

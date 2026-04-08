@@ -19,5 +19,5 @@ if [ ! -d "$DATASETS_DIR/$DATASET" ]; then
     exit 1
 fi
 
-find "$DATASETS_DIR/$DATASET" -type f \( -name '*.fa' -o -name '*.fasta' -o -name '*.fna' \) | sort > "$SCRIPT_DIR/$DATASET.txt"
+find "$DATASETS_DIR/$DATASET" -type f \( -name '*.fa' -o -name '*.fasta' -o -name '*.fna' -o -name '*.fa.gz' -o -name '*.fasta.gz' -o -name '*.fna.gz' \) | sort > "$SCRIPT_DIR/$DATASET.txt"
 echo "Created $SCRIPT_DIR/$DATASET.txt with $(wc -l < "$SCRIPT_DIR/$DATASET.txt") entries."

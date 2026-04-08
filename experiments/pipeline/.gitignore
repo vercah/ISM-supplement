@@ -1,8 +1,0 @@
-01_datasets/*.txt
-04_indices/
-07_ham_dists/
-.snakemake/
-08_tsp/
-05_dumps/*color_sets*
-05_dumps/*unitigs*
-09_trees/

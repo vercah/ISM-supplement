@@ -1,0 +1,234 @@
+import glob
+import os
+
+REPO_ROOT = os.path.abspath(os.path.join(workflow.basedir, ".."))
+CONCORDE_BIN = os.path.abspath(
+    os.path.join(REPO_ROOT, "bin", "concorde")
+)
+if not os.path.exists(CONCORDE_BIN):
+    raise FileNotFoundError(f"Concorde binary not found at {CONCORDE_BIN}")
+
+# Parameters
+k_values = [31]  # 15, 18, 23, 31
+dataset_files = sorted(glob.glob(os.path.join("01_datasets", "*.txt")))
+g_values = [os.path.splitext(os.path.basename(path))[0] for path in dataset_files]
+if not g_values:
+    raise FileNotFoundError(
+        "No dataset files found in 01_datasets. Add one or more '*.txt' files first."
+    )
+matrix_types = ["kmer", "unitig"]
+dataset_sizes = {g: sum(1 for _ in open(f"01_datasets/{g}.txt")) for g in g_values}
+
+N_values = {g: [dataset_sizes[g]] for g in g_values}
+
+
+rule all:
+    input:
+        [
+            f"11_runs/{g}_{order}_k{k}_N{n}_{matrix}.runs"
+            for g in g_values
+            for k in k_values
+            for n in N_values[g]
+            for order in ["upgma", "optimal", "randomized", "nj", "worst"]
+            for matrix in matrix_types
+        ],
+
+
+rule randomization:
+    input:
+        txt="01_datasets/{dataset}.txt",
+    output:
+        txt="02_order_randomization/{dataset}.txt",
+    shell:
+        """
+        cat {input.txt} | sort -R > {output.txt}
+    """
+
+
+rule create_selection:
+    input:
+        txt=rules.randomization.output,
+    output:
+        txt="03_selection/{dataset}.N{N}.txt",
+    shell:
+        """
+       head -n {wildcards.N} {input.txt} | sort > {output.txt}
+    """
+
+
+rule generate_fulgor_index:
+    input:
+        txt="01_datasets/{dataset}.txt",
+    output:
+        fur="04_indices/{dataset}_k{k}.fur",
+    threads: 32
+    params:
+        minimizer_size=lambda wc: min(20, int(wc.k) - 2),
+        ram_gib=12,
+    shell:
+        """
+        ulimit -n 4096
+        fulgor build \\
+                -l {input.txt} \\
+                -o 04_indices/{wildcards.dataset}_k{wildcards.k} \\
+                -k {wildcards.k} \\
+                -m {params.minimizer_size} \\
+                -d 04_indices/{wildcards.dataset}_k{wildcards.k}_tmp \\
+                -g {params.ram_gib} \\
+                -t {threads} \\
+                --verbose --check
+        """
+
+
+rule dump_fulgor_files:
+    input:
+        fur="04_indices/{dataset}_k{k}.fur",
+    output:
+        sets="05_dumps/{dataset}_k{k}.color_sets.txt",
+        meta="05_dumps/{dataset}_k{k}.metadata.txt",
+        unitigs="05_dumps/{dataset}_k{k}.unitigs.fa",
+    params:
+        prefix="04_indices/{dataset}_k{k}",
+    shell:
+        """
+        fulgor dump -i {input.fur}
+        mv "{params.prefix}.color_sets.txt" {output.sets}
+        mv "{params.prefix}.metadata.txt" {output.meta}
+        mv "{params.prefix}.unitigs.fa" {output.unitigs}
+    """
+
+
+rule generate_distances_from_dump:
+    input:
+        sets="05_dumps/{dataset}_k{k}.color_sets.txt",
+        meta="05_dumps/{dataset}_k{k}.metadata.txt",
+        unitigs="05_dumps/{dataset}_k{k}.unitigs.fa",
+    output:
+        unitig="07_ham_dists/{dataset}_k{k}_unitig.dists.txt.xz",
+        kmer="07_ham_dists/{dataset}_k{k}_kmer.dists.txt.xz",
+    threads: 32
+    shell:
+        """
+            ./_build_dists_parallel.py 05_dumps {wildcards.dataset} {wildcards.k} 07_ham_dists {threads}
+            xz -9 07_ham_dists/{wildcards.dataset}_k{wildcards.k}_unitig.dists.txt
+            xz -9 07_ham_dists/{wildcards.dataset}_k{wildcards.k}_kmer.dists.txt
+        """
+
+
+# ----------------------------
+# ------------ TSP ----------------
+# ----------------------------
+
+
+rule export_tsp_instance:
+    input:
+        selection="03_selection/{dataset}.N{N}.txt",
+        dists="07_ham_dists/{dataset}_k{k}_{type}.dists.txt.xz",
+    output:
+        worst="08_tsp/{dataset}_worst_k{k}_N{N}_{type}/instance.tsp",
+        optimal="08_tsp/{dataset}_optimal_k{k}_N{N}_{type}/instance.tsp",
+    shell:
+        """
+        ./_export_tsp_instance.py {input.dists} {input.selection} \
+                -o {output.optimal} \
+                -w {output.worst}
+    """
+
+
+rule run_concorde:
+    input:
+        tsp="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/instance.tsp",
+    output:
+        sol="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/instance.sol",
+        log="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/log.txt",
+    params:
+        concorde=CONCORDE_BIN,
+    shell:
+        """
+        cd $(dirname {input.tsp})/ \
+            && "{params.concorde}" -o instance.sol instance.tsp 2>&1 \
+            | tee log.txt
+        """
+
+
+# --------------------------------------
+# -----------------TREES---------------------
+# --------------------------------------
+
+
+rule run_attotree:
+    input:
+        selection="03_selection/{dataset}.N{N}.txt",
+    output:
+        nw="09_trees/{dataset}_{method}_N{N}.nw",
+    wildcard_constraints:
+        method=r"(nj|upgma)",
+    threads: 32
+    shell:
+        """
+        attotree -t {threads} -m {wildcards.method} -L {input.selection} -V > {output.nw}
+   """
+
+
+# --------------------------------------
+# -----------------ORDERS---------------------
+# --------------------------------------
+rule get_tree_order:
+    input:
+        nw="09_trees/{dataset}_{method}_N{N}.nw",
+    output:
+        order="10_orders/{dataset}_{method}_k{k}_N{N}_{type}.txt",
+    wildcard_constraints:
+        method=r"(nj|upgma)",
+    shell:
+        """
+        ./_postprocess_tree.py -l {output.order} {input.nw} /dev/null
+   """
+
+
+rule get_randomized_order:
+    input:
+        order="10_orders/{dataset}_upgma_k{k}_N{N}_{type}.txt",
+    output:
+        rand="10_orders/{dataset}_randomized_k{k}_N{N}_{type}.txt",
+    shell:
+        """
+        cat {input.order} | sort -R > {output.rand}
+    """
+
+
+rule extract_tsp_order:
+    input:
+        sol="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/instance.sol",
+        tsp="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/instance.tsp",
+    output:
+        order="10_orders/{dataset}_{variant}_k{k}_N{N}_{type}.txt",
+    wildcard_constraints:
+        variant=r"(optimal|worst)",
+    shell:
+        """
+        ./_extract_path_from_tsp_solution.py {input.tsp} {input.sol} > {output.order}
+    """
+
+
+# --------------------------------------
+# -----------------FINAL STATS---------------------
+# --------------------------------------
+rule compute_final_runs:
+    input:
+        dists="07_ham_dists/{dataset}_k{k}_{type}.dists.txt.xz",
+        order="10_orders/{dataset}_{method}_k{k}_N{N}_{type}.txt",
+    output:
+        run="11_runs/{dataset}_{method}_k{k}_N{N}_{type}.runs",
+    shell:
+        """
+       ./_evaluate_order_nb_runs.py {input.dists} {input.order} \
+            --num-rows $(
+                if [ "{wildcards.type}" = "unitig" ]; then
+                    grep '^num_unitigs=' 05_dumps/{wildcards.dataset}_k{wildcards.k}.metadata.txt | cut -d= -f2
+                elif [ "{wildcards.type}" = "kmer" ]; then
+                    grep '^num_kmers=' 05_dumps/{wildcards.dataset}_k{wildcards.k}.metadata.txt | cut -d= -f2
+                fi
+            ) \
+            --out {output.run}
+    """

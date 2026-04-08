@@ -80,7 +80,7 @@ rule generate_fulgor_index:
     output:
         fur="04_indices/{dataset}_k{k}.fur",
         time="04_indices/{dataset}_k{k}.fur.time",
-    threads: 32
+    threads: 8
     params:
         minimizer_size=lambda wc: min(20, int(wc.k) - 2),
         ram_gib=12,
@@ -127,7 +127,7 @@ rule generate_distances_from_dump:
         unitig="07_ham_dists/{dataset}_k{k}_unitig.dists.txt.xz",
         kmer="07_ham_dists/{dataset}_k{k}_kmer.dists.txt.xz",
         time="07_ham_dists/{dataset}_k{k}.build_dists.time",
-    threads: 32
+    threads: 4
     shell:
         """
             start_utc="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
@@ -197,7 +197,7 @@ rule run_attotree:
         time="09_trees/{dataset}_{method}_N{N}.nw.time",
     wildcard_constraints:
         method=r"(nj|upgma)",
-    threads: 32
+    threads: 8
     shell:
         timed_shell("run_attotree", "{output.time}", """
         attotree -t {threads} -m {wildcards.method} -L {input.selection} -V > {output.nw}

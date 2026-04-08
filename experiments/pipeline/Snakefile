@@ -61,6 +61,8 @@ rule generate_fulgor_index:
     output:
         fur="04_indices/{dataset}_k{k}.fur",
     threads: 32
+    params:
+        minimizer_size=lambda wc: min(20, int(wc.k) - 2),
     shell:
         """
         ulimit -n 4096
@@ -68,7 +70,7 @@ rule generate_fulgor_index:
                 -l {input.txt} \\
                 -o 04_indices/{wildcards.dataset}_k{wildcards.k} \\
                 -k {wildcards.k} \\
-                -m 20 \\
+                -m {params.minimizer_size} \\
                 -d 04_indices/{wildcards.dataset}_k{wildcards.k}_tmp \\
                 -g 12 \\
                 -t {threads} \\

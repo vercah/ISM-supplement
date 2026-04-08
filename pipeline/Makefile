@@ -30,12 +30,13 @@ clean: ## Clean
 	rm -fv \
 		02_order_randomization/*.txt \
 		03_selection/*.txt \
-		04_indices/*.fur \
-		05_dumps/{*.fa,*.txt} \
-		07_ham_dists/{*.txt,*.xz} \
-		09_trees/*.nw \
-		10_orders/*.txt \
-		11_runs/*.runs
+		04_indices/{*.fur,*.time} \
+		05_dumps/{*.fa,*.txt,*.time} \
+		07_ham_dists/{*.txt,*.xz,*.time} \
+		08_tsp/*.time \
+		09_trees/{*.nw,*.time} \
+		10_orders/{*.txt,*.time} \
+		11_runs/{*.runs,*.time}
 	rm -vfr 04_indices/*/ 08_tsp/*/
 
 cleanall: clean ## Clean all

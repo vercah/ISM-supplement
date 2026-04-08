@@ -22,6 +22,24 @@ dataset_sizes = {g: sum(1 for _ in open(f"01_datasets/{g}.txt")) for g in g_valu
 N_values = {g: [dataset_sizes[g]] for g in g_values}
 
 
+def timed_shell(rule_name, time_file, command, threads="1"):
+    escaped_command = command.strip().replace("'", "'\"'\"'")
+    escaped_time_file = str(time_file).replace("'", "'\"'\"'")
+    return f"""
+        start_utc="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+        printf 'rule={rule_name}\\n' > '{escaped_time_file}'
+        printf 'host=%s\\n' "$(hostname)" >> '{escaped_time_file}'
+        printf 'cwd=%s\\n' "$(pwd)" >> '{escaped_time_file}'
+        printf 'threads={threads}\\n' >> '{escaped_time_file}'
+        printf 'start_utc=%s\\n' "$start_utc" >> '{escaped_time_file}'
+        /usr/bin/time -p -o '{escaped_time_file}' -a bash -lc '{escaped_command}'
+        status=$?
+        printf 'exit_status=%s\\n' "$status" >> '{escaped_time_file}'
+        printf 'end_utc=%s\\n' "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> '{escaped_time_file}'
+        exit "$status"
+    """
+
+
 rule all:
     input:
         [
@@ -61,12 +79,13 @@ rule generate_fulgor_index:
         txt="01_datasets/{dataset}.txt",
     output:
         fur="04_indices/{dataset}_k{k}.fur",
+        time="04_indices/{dataset}_k{k}.fur.time",
     threads: 32
     params:
         minimizer_size=lambda wc: min(20, int(wc.k) - 2),
         ram_gib=12,
     shell:
-        """
+        timed_shell("generate_fulgor_index", "{output.time}", """
         ulimit -n 4096
         fulgor build \\
                 -l {input.txt} \\
@@ -77,7 +96,7 @@ rule generate_fulgor_index:
                 -g {params.ram_gib} \\
                 -t {threads} \\
                 --verbose --check
-        """
+        """, threads="{threads}")
 
 
 rule dump_fulgor_files:
@@ -87,15 +106,16 @@ rule dump_fulgor_files:
         sets="05_dumps/{dataset}_k{k}.color_sets.txt",
         meta="05_dumps/{dataset}_k{k}.metadata.txt",
         unitigs="05_dumps/{dataset}_k{k}.unitigs.fa",
+        time="05_dumps/{dataset}_k{k}.dump.time",
     params:
         prefix="04_indices/{dataset}_k{k}",
     shell:
-        """
+        timed_shell("dump_fulgor_files", "{output.time}", """
         fulgor dump -i {input.fur}
         mv "{params.prefix}.color_sets.txt" {output.sets}
         mv "{params.prefix}.metadata.txt" {output.meta}
         mv "{params.prefix}.unitigs.fa" {output.unitigs}
-    """
+    """)
 
 
 rule generate_distances_from_dump:
@@ -106,10 +126,21 @@ rule generate_distances_from_dump:
     output:
         unitig="07_ham_dists/{dataset}_k{k}_unitig.dists.txt.xz",
         kmer="07_ham_dists/{dataset}_k{k}_kmer.dists.txt.xz",
+        time="07_ham_dists/{dataset}_k{k}.build_dists.time",
     threads: 32
     shell:
         """
-            ./_build_dists_parallel.py 05_dumps {wildcards.dataset} {wildcards.k} 07_ham_dists {threads}
+            start_utc="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+            printf 'rule=generate_distances_from_dump\n' > '{output.time}'
+            printf 'host=%s\n' "$(hostname)" >> '{output.time}'
+            printf 'cwd=%s\n' "$(pwd)" >> '{output.time}'
+            printf 'threads={threads}\n' >> '{output.time}'
+            printf 'start_utc=%s\n' "$start_utc" >> '{output.time}'
+            /usr/bin/time -p -o '{output.time}' -a bash -lc './_build_dists_parallel.py 05_dumps {wildcards.dataset} {wildcards.k} 07_ham_dists {threads}'
+            status=$?
+            printf 'exit_status=%s\n' "$status" >> '{output.time}'
+            printf 'end_utc=%s\n' "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> '{output.time}'
+            test "$status" -eq 0
             xz -9 07_ham_dists/{wildcards.dataset}_k{wildcards.k}_unitig.dists.txt
             xz -9 07_ham_dists/{wildcards.dataset}_k{wildcards.k}_kmer.dists.txt
         """
@@ -127,12 +158,13 @@ rule export_tsp_instance:
     output:
         worst="08_tsp/{dataset}_worst_k{k}_N{N}_{type}/instance.tsp",
         optimal="08_tsp/{dataset}_optimal_k{k}_N{N}_{type}/instance.tsp",
+        time="08_tsp/{dataset}_k{k}_N{N}_{type}.export_tsp.time",
     shell:
-        """
+        timed_shell("export_tsp_instance", "{output.time}", """
         ./_export_tsp_instance.py {input.dists} {input.selection} \
                 -o {output.optimal} \
                 -w {output.worst}
-    """
+    """)
 
 
 rule run_concorde:
@@ -141,14 +173,15 @@ rule run_concorde:
     output:
         sol="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/instance.sol",
         log="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/log.txt",
+        time="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/instance.sol.time",
     params:
         concorde=CONCORDE_BIN,
     shell:
-        """
+        timed_shell("run_concorde", "{output.time}", """
         cd $(dirname {input.tsp})/ \
             && "{params.concorde}" -o instance.sol instance.tsp 2>&1 \
             | tee log.txt
-        """
+        """)
 
 
 # --------------------------------------
@@ -161,13 +194,14 @@ rule run_attotree:
         selection="03_selection/{dataset}.N{N}.txt",
     output:
         nw="09_trees/{dataset}_{method}_N{N}.nw",
+        time="09_trees/{dataset}_{method}_N{N}.nw.time",
     wildcard_constraints:
         method=r"(nj|upgma)",
     threads: 32
     shell:
-        """
+        timed_shell("run_attotree", "{output.time}", """
         attotree -t {threads} -m {wildcards.method} -L {input.selection} -V > {output.nw}
-   """
+   """, threads="{threads}")
 
 
 # --------------------------------------
@@ -178,12 +212,13 @@ rule get_tree_order:
         nw="09_trees/{dataset}_{method}_N{N}.nw",
     output:
         order="10_orders/{dataset}_{method}_k{k}_N{N}_{type}.txt",
+        time="10_orders/{dataset}_{method}_k{k}_N{N}_{type}.txt.time",
     wildcard_constraints:
         method=r"(nj|upgma)",
     shell:
-        """
+        timed_shell("get_tree_order", "{output.time}", """
         ./_postprocess_tree.py -l {output.order} {input.nw} /dev/null
-   """
+   """)
 
 
 rule get_randomized_order:
@@ -203,12 +238,13 @@ rule extract_tsp_order:
         tsp="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/instance.tsp",
     output:
         order="10_orders/{dataset}_{variant}_k{k}_N{N}_{type}.txt",
+        time="10_orders/{dataset}_{variant}_k{k}_N{N}_{type}.txt.time",
     wildcard_constraints:
         variant=r"(optimal|worst)",
     shell:
-        """
+        timed_shell("extract_tsp_order", "{output.time}", """
         ./_extract_path_from_tsp_solution.py {input.tsp} {input.sol} > {output.order}
-    """
+    """)
 
 
 # --------------------------------------
@@ -220,8 +256,9 @@ rule compute_final_runs:
         order="10_orders/{dataset}_{method}_k{k}_N{N}_{type}.txt",
     output:
         run="11_runs/{dataset}_{method}_k{k}_N{N}_{type}.runs",
+        time="11_runs/{dataset}_{method}_k{k}_N{N}_{type}.runs.time",
     shell:
-        """
+        timed_shell("compute_final_runs", "{output.time}", """
        ./_evaluate_order_nb_runs.py {input.dists} {input.order} \
             --num-rows $(
                 if [ "{wildcards.type}" = "unitig" ]; then
@@ -231,4 +268,4 @@ rule compute_final_runs:
                 fi
             ) \
             --out {output.run}
-    """
+    """)

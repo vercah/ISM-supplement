@@ -36,7 +36,7 @@ clean: ## Clean
 		09_trees/*.nw \
 		10_orders/*.txt \
 		11_runs/*.runs
-	rm -vfr 08_tsp/*/
+	rm -vfr 04_indices/*/ 08_tsp/*/
 
 cleanall: clean ## Clean all
 

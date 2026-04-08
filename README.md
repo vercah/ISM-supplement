@@ -51,38 +51,38 @@ This downloads, builds, and places the `concorde` binary in `bin/concorde`.
 
 ## Running the pipeline
 
-The example pipeline is located in `experiments/pipeline/`.
+The example pipeline is located in `pipeline/`.
 
 
 ### Step 1: Prepare dataset file(s)
 
-The pipeline auto-detects every `*.txt` file in `experiments/pipeline/01_datasets/`. Each such file is treated as one dataset and must contain absolute paths to input genomes, one per line.
+The pipeline auto-detects every `*.txt` file in `pipeline/01_datasets/`. Each such file is treated as one dataset and must contain absolute paths to input genomes, one per line.
 
 #### Minigono example
 
-The bundled example dataset is `minigono`, stored in `experiments/data/minigono/`. To prepare its file-of-filenames, run:
+The bundled example dataset is `minigono`, stored in `data/minigono/`. To prepare its file-of-filenames, run:
 
 ```bash
-cd experiments/pipeline
+cd pipeline
 ./prepare_minigono.sh
 ```
 
-This creates `experiments/pipeline/01_datasets/minigono.txt`.
+This creates `pipeline/01_datasets/minigono.txt`.
 
 **Using your own data**
 
-You can add your own datasets by placing a folder with genome files (`.fa`, `.fasta`, or `.fna`) into `experiments/data/`. Then generate the corresponding file-of-filenames in `01_datasets/`:
+You can add your own datasets by placing a folder with genome files (`.fa`, `.fasta`, or `.fna`) into `data/`. Then generate the corresponding file-of-filenames in `01_datasets/`:
 
 ```bash
-cd experiments/pipeline/01_datasets
+cd pipeline/01_datasets
 ./generate_data.sh my_dataset
 ```
 
-This creates `experiments/pipeline/01_datasets/my_dataset.txt`. Any dataset `.txt` file present in `01_datasets/` will be picked up automatically when the pipeline runs.
+This creates `pipeline/01_datasets/my_dataset.txt`. Any dataset `.txt` file present in `01_datasets/` will be picked up automatically when the pipeline runs.
 
 ### Step 2: Configure pipeline parameters
 
-The pipeline parameters are defined at the top of `experiments/pipeline/Snakefile`:
+The pipeline parameters are defined at the top of `pipeline/Snakefile`:
 
 - **`k_values`** — list of k-mer sizes (default: `[31]`)
 - **`matrix_types`** — types of presence/absence matrices (default: `["kmer", "unitig"]`)
@@ -95,7 +95,7 @@ The pipeline generates results for the Cartesian product of all parameter combin
 Run the pipeline through `make`:
 
 ```bash
-cd experiments/pipeline
+cd pipeline
 make
 ```
 

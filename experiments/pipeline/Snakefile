@@ -68,7 +68,7 @@ rule generate_fulgor_index:
                 -l {input.txt} \\
                 -o 04_indices/{wildcards.dataset}_k{wildcards.k} \\
                 -k {wildcards.k} \\
-                -m 12 \\
+                -m 20 \\
                 -d 04_indices/{wildcards.dataset}_k{wildcards.k}_tmp \\
                 -g 12 \\
                 -t {threads} \\

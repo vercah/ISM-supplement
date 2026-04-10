@@ -45,8 +45,9 @@ Create a dedicated Conda environment with all dependencies using [Bioconda](http
 ```bash
 conda create -n ism -c bioconda -c conda-forge --override-channels \
     python=3.12 \
-    snakemake fulgor attotree \
-    numpy pandas joblib xopen progressbar2 ete3
+    snakemake fulgor attotree mash \
+    numpy pandas joblib xopen progressbar2 ete3 \
+    libstdcxx-ng
 conda activate ism
 ```
 

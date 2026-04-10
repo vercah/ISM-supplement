@@ -41,7 +41,21 @@ def process(inst_fn, sol_fn):
         name for name in sorted_keys if not name.startswith("_DUMMY_")
     ]
 
-    print(*real_tour, sep="\n")
+    # Remove consecutive duplicates from Concorde padding (n_real < 35 case)
+    deduped = [real_tour[0]] + [
+        real_tour[i] for i in range(1, len(real_tour))
+        if real_tour[i] != real_tour[i - 1]
+    ]
+
+    # Safety: non-consecutive duplicates should never happen
+    if len(deduped) != len(set(deduped)):
+        from collections import Counter
+        dupes = {k: v for k, v in Counter(deduped).items() if v > 1}
+        print(f"ERROR: non-consecutive duplicate genomes in tour: {dupes}",
+              file=sys.stderr)
+        sys.exit(1)
+
+    print(*deduped, sep="\n")
 
 
 def main():

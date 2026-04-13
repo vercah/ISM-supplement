@@ -34,7 +34,6 @@ clean: ## Clean
 		05_dumps/{*.fa,*.txt,*.time,*.time.tmp} \
 		07_ham_dists/{*.txt,*.xz,*.time,*.time.tmp} \
 		08_tsp/*.{time,time.tmp} \
-		08_tsp/*/*.{time,time.tmp} \
 		09_trees/{*.nw,*.time,*.time.tmp} \
 		10_orders/{*.txt,*.time,*.time.tmp} \
 		11_runs/{*.runs,*.time,*.time.tmp}

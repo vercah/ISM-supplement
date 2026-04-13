@@ -170,21 +170,23 @@ rule run_concorde:
     output:
         sol="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/instance.sol",
         log="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/log.txt",
-        time="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/instance.sol.time",
+        time="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}.instance.sol.time",
     params:
         concorde=CONCORDE_BIN,
     shell:
         """
-        ./_time_log.sh start "{output.time}.tmp" run_concorde
+        time_tmp="$PWD/{output.time}.tmp"
+
+        ./_time_log.sh start "$time_tmp" run_concorde
 
         (
             cd $(dirname {input.tsp})/
-            /usr/bin/time -p -o "$(basename "{output.time}.tmp")" -a \
+            /usr/bin/time -p -o "$time_tmp" -a \
                 "{params.concorde}" -o instance.sol instance.tsp 2>&1 \
                 | tee log.txt
         )
 
-        ./_time_log.sh end "{output.time}.tmp" "{output.time}"
+        ./_time_log.sh end "$time_tmp" "{output.time}"
 
         """
 

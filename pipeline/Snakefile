@@ -68,22 +68,7 @@ rule generate_fulgor_index:
         ram_gib=12,
     shell:
         """
-        ./_time_log.sh start "{output.time}.tmp" generate_fulgor_index "{threads}"
-
-        ulimit -n 4096
-        /usr/bin/time -p -o "{output.time}.tmp" -a \\
-            fulgor build \\
-                -l {input.txt} \\
-                -o 04_indices/{wildcards.dataset}_k{wildcards.k} \\
-                -k {wildcards.k} \\
-                -m {params.minimizer_size} \\
-                -d 04_indices/{wildcards.dataset}_k{wildcards.k}_tmp \\
-                -g {params.ram_gib} \\
-                -t {threads} \\
-                --verbose --check
-
-        ./_time_log.sh end "{output.time}.tmp" "{output.time}"
-
+        python3 ../bin/galitime.py -l "{output.time}" -n generate_fulgor_index "ulimit -n 4096 && fulgor build -l {input.txt} -o 04_indices/{wildcards.dataset}_k{wildcards.k} -k {wildcards.k} -m {params.minimizer_size} -d 04_indices/{wildcards.dataset}_k{wildcards.k}_tmp -g {params.ram_gib} -t {threads} --verbose --check"
         """
 
 
@@ -99,16 +84,10 @@ rule dump_fulgor_files:
         prefix="04_indices/{dataset}_k{k}",
     shell:
         """
-        ./_time_log.sh start "{output.time}.tmp" dump_fulgor_files
-
-        /usr/bin/time -p -o "{output.time}.tmp" -a \
-            fulgor dump -i {input.fur}
+        python3 ../bin/galitime.py -l "{output.time}" -n dump_fulgor_files "fulgor dump -i {input.fur}"
         mv "{params.prefix}.color_sets.txt" {output.sets}
         mv "{params.prefix}.metadata.txt" {output.meta}
         mv "{params.prefix}.unitigs.fa" {output.unitigs}
-
-        ./_time_log.sh end "{output.time}.tmp" "{output.time}"
-
     """
 
 
@@ -124,13 +103,7 @@ rule generate_distances_from_dump:
     threads: 4
     shell:
         """
-        ./_time_log.sh start "{output.time}.tmp" generate_distances_from_dump "{threads}"
-
-        /usr/bin/time -p -o "{output.time}.tmp" -a \
-            ./_build_dists_parallel.py 05_dumps {wildcards.dataset} {wildcards.k} 07_ham_dists {threads}
-
-        ./_time_log.sh end "{output.time}.tmp" "{output.time}"
-
+        python3 ../bin/galitime.py -l "{output.time}" -n generate_distances_from_dump "./_build_dists_parallel.py 05_dumps {wildcards.dataset} {wildcards.k} 07_ham_dists {threads}"
         xz -9 07_ham_dists/{wildcards.dataset}_k{wildcards.k}_unitig.dists.txt
         xz -9 07_ham_dists/{wildcards.dataset}_k{wildcards.k}_kmer.dists.txt
 
@@ -152,15 +125,7 @@ rule export_tsp_instance:
         time="08_tsp/{dataset}_k{k}_N{N}_{type}.export_tsp.time",
     shell:
         """
-        ./_time_log.sh start "{output.time}.tmp" export_tsp_instance
-
-        /usr/bin/time -p -o "{output.time}.tmp" -a \
-            ./_export_tsp_instance.py {input.dists} {input.selection} \
-                -o {output.optimal} \
-                -w {output.worst}
-
-        ./_time_log.sh end "{output.time}.tmp" "{output.time}"
-
+        python3 ../bin/galitime.py -l "{output.time}" -n export_tsp_instance "./_export_tsp_instance.py {input.dists} {input.selection} -o {output.optimal} -w {output.worst}"
     """
 
 
@@ -175,19 +140,12 @@ rule run_concorde:
         concorde=CONCORDE_BIN,
     shell:
         """
-        time_tmp="$PWD/{output.time}.tmp"
-
-        ./_time_log.sh start "$time_tmp" run_concorde
+        repo_pwd="$PWD"
 
         (
-            cd $(dirname {input.tsp})/
-            /usr/bin/time -p -o "$time_tmp" -a \
-                "{params.concorde}" -o instance.sol instance.tsp 2>&1 \
-                | tee log.txt
+            cd "$(dirname {input.tsp})"
+            python3 "$repo_pwd/../bin/galitime.py" -l "$repo_pwd/{output.time}" -n run_concorde "'{params.concorde}' -o instance.sol instance.tsp 2>&1 | tee log.txt"
         )
-
-        ./_time_log.sh end "$time_tmp" "{output.time}"
-
         """
 
 
@@ -207,13 +165,7 @@ rule run_attotree:
     threads: 8
     shell:
         """
-        ./_time_log.sh start "{output.time}.tmp" run_attotree "{threads}"
-
-        /usr/bin/time -p -o "{output.time}.tmp" -a \
-            attotree -t {threads} -m {wildcards.method} -L {input.selection} -V > {output.nw}
-
-        ./_time_log.sh end "{output.time}.tmp" "{output.time}"
-
+        python3 ../bin/galitime.py -l "{output.time}" -n run_attotree "attotree -t {threads} -m {wildcards.method} -L {input.selection} -V > {output.nw}"
         """
 
 
@@ -230,13 +182,7 @@ rule get_tree_order:
         method=r"(nj|upgma)",
     shell:
         """
-        ./_time_log.sh start "{output.time}.tmp" get_tree_order
-
-        /usr/bin/time -p -o "{output.time}.tmp" -a \
-            ./_postprocess_tree.py -l {output.order} {input.nw} /dev/null
-
-        ./_time_log.sh end "{output.time}.tmp" "{output.time}"
-
+        python3 ../bin/galitime.py -l "{output.time}" -n get_tree_order "./_postprocess_tree.py -l {output.order} {input.nw} /dev/null"
         """
 
 
@@ -262,13 +208,7 @@ rule extract_tsp_order:
         variant=r"(optimal|worst)",
     shell:
         """
-        ./_time_log.sh start "{output.time}.tmp" extract_tsp_order
-
-        /usr/bin/time -p -o "{output.time}.tmp" -a \
-            ./_extract_path_from_tsp_solution.py {input.tsp} {input.sol} > {output.order}
-
-        ./_time_log.sh end "{output.time}.tmp" "{output.time}"
-
+        python3 ../bin/galitime.py -l "{output.time}" -n extract_tsp_order "./_extract_path_from_tsp_solution.py {input.tsp} {input.sol} > {output.order}"
     """
 
 
@@ -284,19 +224,5 @@ rule compute_final_runs:
         time="11_runs/{dataset}_{method}_k{k}_N{N}_{type}.runs.time",
     shell:
         """
-        ./_time_log.sh start "{output.time}.tmp" compute_final_runs
-
-        /usr/bin/time -p -o "{output.time}.tmp" -a \
-            ./_evaluate_order_nb_runs.py {input.dists} {input.order} \
-                --num-rows $(
-                    if [ "{wildcards.type}" = "unitig" ]; then
-                        grep '^num_unitigs=' 05_dumps/{wildcards.dataset}_k{wildcards.k}.metadata.txt | cut -d= -f2
-                    elif [ "{wildcards.type}" = "kmer" ]; then
-                        grep '^num_kmers=' 05_dumps/{wildcards.dataset}_k{wildcards.k}.metadata.txt | cut -d= -f2
-                    fi
-                ) \
-                --out {output.run}
-
-        ./_time_log.sh end "{output.time}.tmp" "{output.time}"
-
+        python3 ../bin/galitime.py -l "{output.time}" -n compute_final_runs "./_evaluate_order_nb_runs.py {input.dists} {input.order} --num-rows \$( if [ '{wildcards.type}' = 'unitig' ]; then grep '^num_unitigs=' 05_dumps/{wildcards.dataset}_k{wildcards.k}.metadata.txt | cut -d= -f2; elif [ '{wildcards.type}' = 'kmer' ]; then grep '^num_kmers=' 05_dumps/{wildcards.dataset}_k{wildcards.k}.metadata.txt | cut -d= -f2; fi ) --out {output.run}"
     """

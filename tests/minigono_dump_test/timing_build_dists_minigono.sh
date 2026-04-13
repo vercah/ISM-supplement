@@ -34,5 +34,5 @@ trap 'rm -rf "$tmpdir"' EXIT
 
 (
     cd "$pipeline_dir"
-    time ./_build_dists_parallel.py 05_dumps minigono 31 "$tmpdir" 1
+    python3 "$repo_root/bin/galitime.py" -l stderr -n timing_build_dists_minigono "./_build_dists_parallel.py 05_dumps minigono 31 '$tmpdir' 1"
 )

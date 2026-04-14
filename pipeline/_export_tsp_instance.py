@@ -80,14 +80,14 @@ def create_matrix_from_file(fn, sel, worst):
             d[k] = orig_max - d[k]
 
     max_dist = max(d.values())
-    #scale_factor = 1
-    #threshold = 10000
+    scale_factor = 1
+    threshold = 10000
 
-    #if max_dist > threshold:  # concorde threshold
-    #    print("scaling applied due to large distances")
-    #    scale_factor = max_dist / threshold  # integer factor
-    #    for k in d:
-    #        d[k] = max(1, int(round(d[k] / scale_factor)))
+    if max_dist > threshold:  # concorde threshold
+        print("scaling applied due to large distances")
+        scale_factor = max_dist / threshold  # integer factor
+        for k in d:
+            d[k] = max(1, int(round(d[k] / scale_factor)))
 
     arr = np.zeros((dim, dim), dtype=np.int32)
     for i, x in enumerate(keys):

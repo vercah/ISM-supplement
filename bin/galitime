@@ -1,9 +1,43 @@
 #!/usr/bin/env python3
+#
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2024- Karel Brinda
+"""
+galitime - benchmarking of shell commands with normalized timing and resource output.
+
+Author: Karel Brinda <karel.brinda@inria.fr>
+Homepage: https://github.com/karel-brinda/galitime
+Issues: https://github.com/karel-brinda/galitime/issues
+License: MIT
+
+MIT License
+
+Copyright (c) 2024- Karel Brinda
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
 
 import argparse
 import collections
 import datetime
 import os
+import shlex
 import re
 import shutil
 import subprocess
@@ -16,13 +50,12 @@ from pathlib import Path
 
 PROGRAM = 'galitime'
 DESC = 'benchmarking of computational experiments using GNU time'
-
-try:
-    sys.path.append(os.path.dirname(__file__))
-    import version
-    VERSION = version.VERSION
-except ImportError:
-    VERSION = "(version NA)"
+__version__ = "0.3.0"
+__author__ = "Karel Brinda"
+__email__ = "karel.brinda@inria.fr"
+__license__ = "MIT"
+__url__ = "https://github.com/karel-brinda/galitime"
+__issues_url__ = "https://github.com/karel-brinda/galitime/issues"
 
 DEFAULT_l = "stderr"
 DEFAULT_r = 1
@@ -99,7 +132,16 @@ class AbstractTime(ABC):
         self.final_exit_code = 0
 
     def __del__(self):
-        self.tmp_dir.cleanup()
+        tmp_dir = getattr(self, "tmp_dir", None)
+        if tmp_dir is not None:
+            tmp_dir.cleanup()
+
+    @staticmethod
+    def _normalize_exit_code(exit_code):
+        if exit_code < 0:
+            # SIGKILL shows up as -9 from wait(); shells conventionally report it as 137.
+            return 128 + (-exit_code)
+        return exit_code
 
     # TODO: add possibility to set up multiple repetitions
     def run(self, times=1):
@@ -132,11 +174,19 @@ class AbstractTime(ABC):
     def current_tmp_fn(self):
         return os.path.join(self.tmp_dir.name, f"timing_output.run_{self.current_i}.log")
 
+    def current_exit_code_fn(self):
+        return os.path.join(self.tmp_dir.name, f"exit_code.run_{self.current_i}.log")
+
     def _execute_time(self):
         """Execute time, whatever command it is
         """
 
-        wrapped_command = f'{self.wrapper()} {self.command}'
+        command_script = (
+            f'galitime_exit_code_file={shlex.quote(self.current_exit_code_fn())}; '
+            'trap \'printf "%s\\n" "$?" > "$galitime_exit_code_file"\' EXIT; '
+            f'{self.command}'
+        )
+        wrapped_command = f'{self.wrapper()} {shlex.quote(self.shell)} -c {shlex.quote(command_script)}'
         #print(f"Running '{wrapped_command}'")
 
         main_process = subprocess.Popen(wrapped_command, shell=True, executable=self.shell)
@@ -146,10 +196,19 @@ class AbstractTime(ABC):
         start_time = datetime.datetime.now()
         try:
             # comment: returncode not the same as int (see https://docs.python.org/3/library/subprocess.html#subprocess.Popen.returncode)
-            exit_code = int(main_process.wait(timeout=timeout))
+            exit_code = self._normalize_exit_code(int(main_process.wait(timeout=timeout)))
         except subprocess.TimeoutExpired:
             exit_code = -1  # timeout
         end_time = datetime.datetime.now()
+        try:
+            with open(self.current_exit_code_fn()) as exit_code_fo:
+                exit_code_lines = [x.strip() for x in exit_code_fo if x.strip()]
+        except FileNotFoundError:
+            exit_code_lines = []
+        if exit_code_lines:
+            if len(exit_code_lines) != 1:
+                raise RuntimeError(f"Unexpected exit code output shape: {exit_code_lines!r}")
+            exit_code = int(exit_code_lines[0])
         self.current_result.set("real_s_py", (end_time - start_time).total_seconds())
         self.current_result.set("exit_code", exit_code)
 
@@ -187,8 +246,19 @@ class GnuTime(AbstractTime):
 
     def _parse_result(self):
         with open(self.current_tmp_fn()) as tmp_fo:
-            gtime_output_values = tmp_fo.readline().strip().split("\t")
+            gtime_output_lines = [x.strip() for x in tmp_fo if x.strip()]
+        gtime_output_values = None
+        for line in reversed(gtime_output_lines):
+            values = line.split("\t")
+            if len(values) == len(self.gtime_columns):
+                gtime_output_values = values
+                break
+        if gtime_output_values is None:
+            raise RuntimeError(f"Unexpected GNU time output shape: {gtime_output_lines!r}")
+        # GNU time's %x is useful for metrics/debugging, but the shell wait status is the canonical exit code.
         for k, v in zip(self.gtime_columns, gtime_output_values):
+            if k == "exit_code":
+                continue
             self.current_result.set(k, v)
         self.current_result.bin_to_si("max_ram_kb")
 
@@ -256,7 +326,7 @@ def run_timing(log_file, command, shell, experiment, gtime, repetitions):
     platf = sys.platform
     # if gtime, run gtime everywhere & always GNU output; platform-specific behaviour
     if gtime:
-        t = GnuTime(command=command, experiment=experiment, time="/usr/bin/env gtime")
+        t = GnuTime(command=command, experiment=experiment, time="/usr/bin/env gtime", shell=shell)
     else:
         if platf == "linux":
             t = GnuTime(command=command, experiment=experiment, shell=shell)
@@ -321,8 +391,8 @@ def main():
 
     parser = CustomArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
-        description="Program: {} ({})\n".format(PROGRAM, DESC) + "Version: {}\n".format(VERSION) +
-        "Contact: Karel Brinda <karel.brinda@inria.fr>",
+        description="Program: {} ({})\n".format(PROGRAM, DESC) +
+        "Version: {}\n".format(__version__) + "Contact: Karel Brinda <karel.brinda@inria.fr>",
     )
 
     parser.add_argument('command', help='the command to be benchmarked')
@@ -330,7 +400,7 @@ def main():
     parser.add_argument(
         '-v',
         action='version',
-        version='{} {}'.format(PROGRAM, VERSION),
+        version='{} {}'.format(PROGRAM, __version__),
     )
 
     parser.add_argument(

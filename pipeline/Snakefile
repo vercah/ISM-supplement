@@ -68,7 +68,19 @@ rule generate_fulgor_index:
         ram_gib=12,
     shell:
         """
-        ../bin/galitime -l "{output.time}" -n generate_fulgor_index "ulimit -n 4096 && fulgor build -l {input.txt} -o 04_indices/{wildcards.dataset}_k{wildcards.k} -k {wildcards.k} -m {params.minimizer_size} -d 04_indices/{wildcards.dataset}_k{wildcards.k}_tmp -g {params.ram_gib} -t {threads} --verbose --check"
+        ulimit -n 4096
+        ../bin/galitime \
+            -l "{output.time}" \
+            -n generate_fulgor_index \
+            "fulgor build \
+                -l {input.txt} \
+                -o 04_indices/{wildcards.dataset}_k{wildcards.k} \
+                -k {wildcards.k} \
+                -m {params.minimizer_size} \
+                -d 04_indices/{wildcards.dataset}_k{wildcards.k}_tmp \
+                -g {params.ram_gib} \
+                -t {threads} \
+                --verbose --check"
         """
 
 
@@ -84,7 +96,10 @@ rule dump_fulgor_files:
         prefix="04_indices/{dataset}_k{k}",
     shell:
         """
-        ../bin/galitime -l "{output.time}" -n dump_fulgor_files "fulgor dump -i {input.fur}"
+        ../bin/galitime \
+            -l "{output.time}" \
+            -n dump_fulgor_files \
+            "fulgor dump -i {input.fur}"
         mv "{params.prefix}.color_sets.txt" {output.sets}
         mv "{params.prefix}.metadata.txt" {output.meta}
         mv "{params.prefix}.unitigs.fa" {output.unitigs}
@@ -103,7 +118,10 @@ rule generate_distances_from_dump:
     threads: 4
     shell:
         """
-        ../bin/galitime -l "{output.time}" -n generate_distances_from_dump "./_build_dists_parallel.py 05_dumps {wildcards.dataset} {wildcards.k} 07_ham_dists {threads}"
+        ../bin/galitime \
+            -l "{output.time}" \
+            -n generate_distances_from_dump \
+            "./_build_dists_parallel.py 05_dumps {wildcards.dataset} {wildcards.k} 07_ham_dists {threads}"
         xz -9 07_ham_dists/{wildcards.dataset}_k{wildcards.k}_unitig.dists.txt
         xz -9 07_ham_dists/{wildcards.dataset}_k{wildcards.k}_kmer.dists.txt
 
@@ -125,7 +143,10 @@ rule export_tsp_instance:
         time="08_tsp/{dataset}_k{k}_N{N}_{type}.export_tsp.time",
     shell:
         """
-        ../bin/galitime -l "{output.time}" -n export_tsp_instance "./_export_tsp_instance.py {input.dists} {input.selection} -o {output.optimal} -w {output.worst}"
+        ../bin/galitime \
+            -l "{output.time}" \
+            -n export_tsp_instance \
+            "./_export_tsp_instance.py {input.dists} {input.selection} -o {output.optimal} -w {output.worst}"
     """
 
 
@@ -144,7 +165,12 @@ rule run_concorde:
 
         (
             cd "$(dirname {input.tsp})"
-            "$repo_pwd/../bin/galitime" -l "$repo_pwd/{output.time}" -n run_concorde "'{params.concorde}' -o instance.sol instance.tsp 2>&1 | tee log.txt"
+            "$repo_pwd/../bin/galitime" \
+                -l "$repo_pwd/{output.time}" \
+                -n run_concorde \
+                "'{params.concorde}' \
+                    -o instance.sol \
+                    instance.tsp 2>&1 | tee log.txt"
         )
         """
 
@@ -165,7 +191,14 @@ rule run_attotree:
     threads: 8
     shell:
         """
-        ../bin/galitime -l "{output.time}" -n run_attotree "attotree -t {threads} -m {wildcards.method} -L {input.selection} -V > {output.nw}"
+        ../bin/galitime \
+            -l "{output.time}" \
+            -n run_attotree \
+            "attotree \
+                -t {threads} \
+                -m {wildcards.method} \
+                -L {input.selection} \
+                -V > {output.nw}"
         """
 
 
@@ -182,7 +215,13 @@ rule get_tree_order:
         method=r"(nj|upgma)",
     shell:
         """
-        ../bin/galitime -l "{output.time}" -n get_tree_order "./_postprocess_tree.py -l {output.order} {input.nw} /dev/null"
+        ../bin/galitime \
+            -l "{output.time}" \
+            -n get_tree_order \
+            "./_postprocess_tree.py \
+                -l {output.order} \
+                {input.nw} \
+                /dev/null"
         """
 
 
@@ -208,7 +247,13 @@ rule extract_tsp_order:
         variant=r"(optimal|worst)",
     shell:
         """
-        ../bin/galitime -l "{output.time}" -n extract_tsp_order "./_extract_path_from_tsp_solution.py {input.tsp} {input.sol} > {output.order}"
+        ../bin/galitime \
+            -l "{output.time}" \
+            -n extract_tsp_order \
+            "./_extract_path_from_tsp_solution.py \
+                {input.tsp} \
+                {input.sol} \
+                > {output.order}"
     """
 
 
@@ -224,5 +269,18 @@ rule compute_final_runs:
         time="11_runs/{dataset}_{method}_k{k}_N{N}_{type}.runs.time",
     shell:
         """
-        ../bin/galitime -l "{output.time}" -n compute_final_runs "./_evaluate_order_nb_runs.py {input.dists} {input.order} --num-rows \$( if [ '{wildcards.type}' = 'unitig' ]; then grep '^num_unitigs=' 05_dumps/{wildcards.dataset}_k{wildcards.k}.metadata.txt | cut -d= -f2; elif [ '{wildcards.type}' = 'kmer' ]; then grep '^num_kmers=' 05_dumps/{wildcards.dataset}_k{wildcards.k}.metadata.txt | cut -d= -f2; fi ) --out {output.run}"
+        ../bin/galitime \
+            -l "{output.time}" \
+            -n compute_final_runs \
+            "./_evaluate_order_nb_runs.py \
+                {input.dists} \
+                {input.order} \
+                --num-rows \$( \
+                    if [ '{wildcards.type}' = 'unitig' ]; then \
+                        grep '^num_unitigs=' 05_dumps/{wildcards.dataset}_k{wildcards.k}.metadata.txt | cut -d= -f2; \
+                    elif [ '{wildcards.type}' = 'kmer' ]; then \
+                        grep '^num_kmers=' 05_dumps/{wildcards.dataset}_k{wildcards.k}.metadata.txt | cut -d= -f2; \
+                    fi \
+                ) \
+                --out {output.run}"
     """

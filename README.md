@@ -56,6 +56,8 @@ conda create -n ism -c bioconda -c conda-forge --override-channels \
 conda activate ism
 ```
 
+The repository already vendors `galitime` `0.3.0` from the upstream GitHub release as the standalone executable `bin/galitime`, so no separate `galitime` installation is required.
+
 ### Concorde TSP solver
 
 [Concorde](https://www.math.uwaterloo.ca/tsp/concorde.html) is installed via the helper script in `bin/`. The pipeline calls `bin/concorde` directly, so no `PATH` changes are required.

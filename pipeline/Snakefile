@@ -16,14 +16,14 @@ if not g_values:
     raise FileNotFoundError(
         "No dataset files found in 01_datasets. Add one or more '*.txt' files first."
     )
-matrix_types = ["kmer", "unitig", "uniqraw"]
+matrix_types = ["kmer", "unitig", "uniqrow"]
 dataset_sizes = {g: sum(1 for _ in open(f"01_datasets/{g}.txt")) for g in g_values}
 
 N_values = {g: [dataset_sizes[g]] for g in g_values}
 
 wildcard_constraints:
     N=r"\d+",
-    type=r"(kmer|unitig|uniqraw)"
+    type=r"(kmer|unitig|uniqrow)"
 
 
 rule all:
@@ -120,7 +120,7 @@ rule generate_distances_from_dump:
     output:
         unitig="07_ham_dists/{dataset}_k{k}_unitig.dists.txt.xz",
         kmer="07_ham_dists/{dataset}_k{k}_kmer.dists.txt.xz",
-        unique_raw="07_ham_dists/{dataset}_k{k}_uniqraw.dists.txt.xz",
+        unique_row="07_ham_dists/{dataset}_k{k}_uniqrow.dists.txt.xz",
         time="07_ham_dists/{dataset}_k{k}.build_dists.time",
     threads: 10
     params:
@@ -133,7 +133,7 @@ rule generate_distances_from_dump:
             "./_build_dists_parallel.py 05_dumps {wildcards.dataset} {wildcards.k} 07_ham_dists {threads}"
         xz -9 07_ham_dists/{wildcards.dataset}_k{wildcards.k}_unitig.dists.txt
         xz -9 07_ham_dists/{wildcards.dataset}_k{wildcards.k}_kmer.dists.txt
-        xz -9 07_ham_dists/{wildcards.dataset}_k{wildcards.k}_uniqraw.dists.txt
+        xz -9 07_ham_dists/{wildcards.dataset}_k{wildcards.k}_uniqrow.dists.txt
 
         """
 
@@ -298,7 +298,7 @@ rule compute_final_runs:
                         grep '^num_unitigs=' 05_dumps/{wildcards.dataset}_k{wildcards.k}.metadata.txt | cut -d= -f2; \\
                     elif [ '{wildcards.type}' = 'kmer' ]; then \\
                         grep '^num_kmers=' 05_dumps/{wildcards.dataset}_k{wildcards.k}.metadata.txt | cut -d= -f2; \\
-                    elif [ '{wildcards.type}' = 'uniqraw' ]; then \\
+                    elif [ '{wildcards.type}' = 'uniqrow' ]; then \\
                         grep '^num_color_sets=' 05_dumps/{wildcards.dataset}_k{wildcards.k}.metadata.txt | cut -d= -f2; \\
                     fi \\
                 ) \\

@@ -22,8 +22,7 @@ def extract_newick_leaf_order(in_tree_fn):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Extract left-to-right leaf order from a Newick tree."
-    )
+        description="Extract left-to-right leaf order from a Newick tree.")
     parser.add_argument("in_tree_fn", metavar="input.tree.nw")
 
     args = parser.parse_args()

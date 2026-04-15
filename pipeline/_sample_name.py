@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-
 FASTA_SUFFIXES = (
     ".fa.gz",
     ".fasta.gz",

@@ -66,12 +66,13 @@ rule generate_fulgor_index:
     params:
         minimizer_size=lambda wc: min(20, int(wc.k) - 2),
         ram_gib=12,
+        experiment=lambda wc: f"fulgor_index_{wc.dataset}_k{wc.k}",
     shell:
         """
         ulimit -n 4096
         ../bin/galitime \\
             -l "{output.time}" \\
-            -n generate_fulgor_index \\
+            -n "{params.experiment}" \\
             "fulgor build \\
                 -l {input.txt} \\
                 -o 04_indices/{wildcards.dataset}_k{wildcards.k} \\
@@ -94,11 +95,12 @@ rule dump_fulgor_files:
         time="05_dumps/{dataset}_k{k}.dump.time",
     params:
         prefix="04_indices/{dataset}_k{k}",
+        experiment=lambda wc: f"fulgor_dump_{wc.dataset}_k{wc.k}",
     shell:
         """
         ../bin/galitime \\
             -l "{output.time}" \\
-            -n dump_fulgor_files \\
+            -n "{params.experiment}" \\
             "fulgor dump -i {input.fur}"
         mv "{params.prefix}.color_sets.txt" {output.sets}
         mv "{params.prefix}.metadata.txt" {output.meta}
@@ -116,11 +118,13 @@ rule generate_distances_from_dump:
         kmer="07_ham_dists/{dataset}_k{k}_kmer.dists.txt.xz",
         time="07_ham_dists/{dataset}_k{k}.build_dists.time",
     threads: 4
+    params:
+        experiment=lambda wc: f"build_dists_{wc.dataset}_k{wc.k}",
     shell:
         """
         ../bin/galitime \\
             -l "{output.time}" \\
-            -n generate_distances_from_dump \\
+            -n "{params.experiment}" \\
             "./_build_dists_parallel.py 05_dumps {wildcards.dataset} {wildcards.k} 07_ham_dists {threads}"
         xz -9 07_ham_dists/{wildcards.dataset}_k{wildcards.k}_unitig.dists.txt
         xz -9 07_ham_dists/{wildcards.dataset}_k{wildcards.k}_kmer.dists.txt
@@ -141,11 +145,13 @@ rule export_tsp_instance:
         worst="08_tsp/{dataset}_worst_k{k}_N{N}_{type}/instance.tsp",
         optimal="08_tsp/{dataset}_optimal_k{k}_N{N}_{type}/instance.tsp",
         time="08_tsp/{dataset}_k{k}_N{N}_{type}.export_tsp.time",
+    params:
+        experiment=lambda wc: f"tsp_export_{wc.dataset}_k{wc.k}_N{wc.N}_{wc.type}",
     shell:
         """
         ../bin/galitime \\
             -l "{output.time}" \\
-            -n export_tsp_instance \\
+            -n "{params.experiment}" \\
             "./_export_tsp_instance.py {input.dists} {input.selection} -o {output.optimal} -w {output.worst}"
     """
 
@@ -159,6 +165,7 @@ rule run_concorde:
         time="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}.instance.sol.time",
     params:
         concorde=CONCORDE_BIN,
+        experiment=lambda wc: f"concorde_{wc.variant}_N{wc.N}_{wc.type}",
     shell:
         """
         repo_pwd="$PWD"
@@ -167,7 +174,7 @@ rule run_concorde:
             cd "$(dirname {input.tsp})"
             "$repo_pwd/../bin/galitime" \\
                 -l "$repo_pwd/{output.time}" \\
-                -n run_concorde \\
+                -n "{params.experiment}" \\
                 "'{params.concorde}' \\
                     -o instance.sol \\
                     instance.tsp 2>&1 | tee log.txt"
@@ -189,11 +196,13 @@ rule run_attotree:
     wildcard_constraints:
         method=r"(nj|upgma)",
     threads: 8
+    params:
+        experiment=lambda wc: f"attotree_{wc.dataset}_{wc.method}_N{wc.N}",
     shell:
         """
         ../bin/galitime \\
             -l "{output.time}" \\
-            -n run_attotree \\
+            -n "{params.experiment}" \\
             "attotree \\
                 -t {threads} \\
                 -m {wildcards.method} \\
@@ -213,11 +222,13 @@ rule get_tree_order:
         time="10_orders/{dataset}_{method}_k{k}_N{N}_{type}.txt.time",
     wildcard_constraints:
         method=r"(nj|upgma)",
+    params:
+        experiment=lambda wc: f"tree_order_{wc.dataset}_{wc.method}_k{wc.k}_N{wc.N}_{wc.type}",
     shell:
         """
         ../bin/galitime \\
             -l "{output.time}" \\
-            -n get_tree_order \\
+            -n "{params.experiment}" \\
             "./_tree_leaf_order.py {input.nw} > {output.order}"
         """
 
@@ -242,11 +253,13 @@ rule extract_tsp_order:
         time="10_orders/{dataset}_{variant}_k{k}_N{N}_{type}.txt.time",
     wildcard_constraints:
         variant=r"(optimal|worst)",
+    params:
+        experiment=lambda wc: f"tsp_order_{wc.dataset}_{wc.variant}_k{wc.k}_N{wc.N}_{wc.type}",
     shell:
         """
         ../bin/galitime \\
             -l "{output.time}" \\
-            -n extract_tsp_order \\
+            -n "{params.experiment}" \\
             "./_extract_path_from_tsp_solution.py \\
                 {input.tsp} \\
                 {input.sol} \\
@@ -264,11 +277,13 @@ rule compute_final_runs:
     output:
         run="11_runs/{dataset}_{method}_k{k}_N{N}_{type}.runs",
         time="11_runs/{dataset}_{method}_k{k}_N{N}_{type}.runs.time",
+    params:
+        experiment=lambda wc: f"final_runs_{wc.dataset}_{wc.method}_k{wc.k}_N{wc.N}_{wc.type}",
     shell:
         """
         ../bin/galitime \\
             -l "{output.time}" \\
-            -n compute_final_runs \\
+            -n "{params.experiment}" \\
             "./_evaluate_order_nb_runs.py \\
                 {input.dists} \\
                 {input.order} \\

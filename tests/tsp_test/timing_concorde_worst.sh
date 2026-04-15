@@ -12,7 +12,7 @@ d=$(mktemp -d)
     cd "$d"
     "$repo_root/bin/galitime" \
         -l stderr \
-        -n timing_concorde_worst \
+        -n concorde_worst \
         "'$repo_root/bin/concorde' \
             '$script_dir/instance_ngono_worst/instance.tsp'"
 )

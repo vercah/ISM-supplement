@@ -26,7 +26,9 @@
 
 Supplementary material and experimental pipelines for the paper:
 
-> Veronika Hendrychová and Karel Břinda (2026). **Why phylogenies compress so well: combinatorial guarantees under the Infinite Sites Model**. *bioRxiv*. [https://doi.org/10.64898/2026.03.18.712055](https://doi.org/10.64898/2026.03.18.712055)
+> Veronika Hendrychová and Karel Břinda (2026). **Why phylogenies compress so well: combinatorial guarantees
+> under the Infinite Sites Model**. *bioRxiv* 2026.03.18.712055.
+> [https://doi.org/10.64898/2026.03.18.712055](https://doi.org/10.64898/2026.03.18.712055)
 
 BibTeX:
 
@@ -35,6 +37,7 @@ BibTeX:
   author = {Veronika Hendrychová and Karel Břinda},
   title = {Why phylogenies compress so well: combinatorial guarantees under the Infinite Sites Model},
   journal = {bioRxiv},
+  volumen = {2026.03.18.712055},
   year = {2026},
   doi = {10.64898/2026.03.18.712055},
   url = {https://doi.org/10.64898/2026.03.18.712055}
@@ -48,15 +51,20 @@ BibTeX:
 Create a dedicated Conda environment with all dependencies using [Bioconda](https://bioconda.github.io/):
 
 ```bash
-conda create -n ism -c bioconda -c conda-forge --override-channels \
-    python=3.12 \
-    snakemake fulgor attotree mash=2.3 \
-    numpy pandas joblib xopen progressbar2 ete3 \
-    libstdcxx-ng
+git clone https://github.com/vercah/ism-supplement
+cd ism-supplement
+
+# create the ism environment with conda
+conda env create -f environment.yml
+# alternative faster route: via mamba
+mamba env create -f environment.yml
+
 conda activate ism
 ```
 
-The repository already vendors `galitime` `0.3.0` from the upstream GitHub release as the standalone executable `bin/galitime`, so no separate `galitime` installation is required.
+The repository already vendors `galitime` `0.3.0` from the upstream GitHub release as the standalone
+executable `bin/galitime`, so no separate `galitime` installation is required.
+
 
 ### Concorde TSP solver
 

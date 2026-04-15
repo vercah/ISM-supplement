@@ -12,4 +12,3 @@ dependencies:
   - xopen
   - progressbar2
   - ete3
-  - libstdcxx-ng

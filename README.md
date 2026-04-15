@@ -27,7 +27,7 @@
 Supplementary material and experimental pipelines for the paper:
 
 > Veronika Hendrychová and Karel Břinda (2026). **Why phylogenies compress so well: combinatorial guarantees
-> under the Infinite Sites Model**. *bioRxiv* 2026.03.18.712055.
+> under the Infinite Sites Model**. *bioRxiv* 2026.03.18.712055, 2026.
 > [https://doi.org/10.64898/2026.03.18.712055](https://doi.org/10.64898/2026.03.18.712055)
 
 BibTeX:

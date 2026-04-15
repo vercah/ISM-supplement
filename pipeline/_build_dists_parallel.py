@@ -202,7 +202,7 @@ def build_and_compute(color_sets, unitigs_file, k, filenames_file, out_path,
             for j in range(i + 1, num_colors):
                 f.write(f"{names[i]}\t{names[j]}\t{kmer_dists[i, j]}\n")
 
-    with open(f"{out_path}/{dataset}_k{k}_unique_raw.dists.txt", "w") as f:
+    with open(f"{out_path}/{dataset}_k{k}_uniqraw.dists.txt", "w") as f:
         for i in range(num_colors):
             for j in range(i + 1, num_colors):
                 f.write(f"{names[i]}\t{names[j]}\t{unique_raw_dists[i, j]}\n")

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -60,7 +61,9 @@ declare -a INPUT_FILES=()
 
 if [ $# -eq 1 ] && [ -d "$DATASETS_DIR/$1" ]; then
     DATASET="$1"
-    mapfile -t INPUT_FILES < <(collect_from_dir "$DATASETS_DIR/$DATASET")
+    while IFS= read -r file; do
+        INPUT_FILES+=("$file")
+    done < <(collect_from_dir "$DATASETS_DIR/$DATASET")
 else
     DATASET="$(derive_dataset_name "$@")"
     for path in "$@"; do

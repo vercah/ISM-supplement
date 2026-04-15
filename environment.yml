@@ -3,11 +3,9 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
-  - python=3.12
-  - snakemake
+  - snakemake-minimal
   - fulgor
   - attotree
-  - mash=2.3
   - numpy
   - pandas
   - joblib

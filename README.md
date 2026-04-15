@@ -62,7 +62,7 @@ mamba env create -f environment.yml
 conda activate ism
 ```
 
-Now test if Fulgor functions correctly by `fulgor -v`. If you see an error like `GLIBCXX_3.4.21' not found`
+Now test if Fulgor functions correctly by `fulgor help`. If you see an error like `GLIBCXX_3.4.21' not found`
 (happens on some older Linux systems), run additionally
 
 ```bash

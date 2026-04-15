@@ -64,7 +64,7 @@ case "${OS}:${ARCH}" in
     CONFIGURE_EXTRA=(--host=darwin)
     ;;
   Darwin:x86_64)
-    QSOPT_A_URL="https://www.math.uwaterloo.ca/~bico/qsopt/downloads/codes/mac64/qsopt.a"
+    QSOPT_A_URL="https://www.math.uwaterloo.ca/~bico/qsopt/downloads/codes/mac64/qsopt.a.gz"
     QSOPT_H_URL="https://www.math.uwaterloo.ca/~bico/qsopt/downloads/codes/mac64/qsopt.h"
     CONFIGURE_EXTRA=(--host=darwin)
     ;;
@@ -100,7 +100,15 @@ SRC_DIR="$WORK_ROOT/src"
 mkdir -p "$QSOPT_DIR" "$SRC_DIR"
 
 echo "Downloading QSopt for ${OS} ${ARCH} ..."
-fetch "$QSOPT_A_URL" "$QSOPT_DIR/qsopt.a"
+if [[ "$QSOPT_A_URL" == *.gz ]]; then
+ fetch "$QSOPT_A_URL" "$QSOPT_DIR/qsopt.a.gz"
+ gunzip -c "$QSOPT_DIR/qsopt.a.gz" > "$QSOPT_DIR/qsopt.a"
+else
+ fetch "$QSOPT_A_URL" "$QSOPT_DIR/qsopt.a"
+fi
+
+file "$QSOPT_DIR/qsopt.a"
+ar -t "$QSOPT_DIR/qsopt.a" >/dev/null
 fetch "$QSOPT_H_URL" "$QSOPT_DIR/qsopt.h"
 
 echo "Downloading Concorde source ..."

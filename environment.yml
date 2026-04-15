@@ -1,0 +1,17 @@
+name: ism
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.12
+  - snakemake
+  - fulgor
+  - attotree
+  - mash=2.3
+  - numpy
+  - pandas
+  - joblib
+  - xopen
+  - progressbar2
+  - ete3
+  - libstdcxx-ng

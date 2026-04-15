@@ -218,10 +218,7 @@ rule get_tree_order:
         ../bin/galitime \\
             -l "{output.time}" \\
             -n get_tree_order \\
-            "./_postprocess_tree.py \\
-                -l {output.order} \\
-                {input.nw} \\
-                /dev/null"
+            "./_tree_leaf_order.py {input.nw} > {output.order}"
         """
 
 

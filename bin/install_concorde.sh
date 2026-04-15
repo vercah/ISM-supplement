@@ -124,7 +124,7 @@ if [[ ! -d "$CONCORDE_DIR" ]]; then
 fi
 
 JOBS="$(cpu_count)"
-export CFLAGS="${CFLAGS:--fPIC -O3 -g -std=gnu89}"
+export CFLAGS="${CFLAGS:--O3 -DNDEBUG -march=native -mtune=native -fomit-frame-pointer -std=gnu89}"
 
 echo "Configuring Concorde ..."
 (

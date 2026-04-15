@@ -108,9 +108,11 @@ def preprocess_color_sets(batch, color_sets):
 
 
 def unique_raw_batches(color_sets, batch_size):
+    # unique_raw counts each dumped color set exactly once, unlike the
+    # unitig- and k-mer-weighted matrices above.
     batch = []
     for colors in color_sets.values():
-        batch.append((list(set(colors)), 1))
+        batch.append((colors, 1))
         if len(batch) >= batch_size:
             yield batch
             batch = []
@@ -190,17 +192,17 @@ def build_and_compute(color_sets, unitigs_file, k, filenames_file, out_path,
 
     #print(f"Matrices merged, started writing", file=sys.stderr, flush=True)
 
-    with open(f"{out_prefix}/{dataset}_k{k}_unitig.dists.txt", "w") as f:
+    with open(f"{out_path}/{dataset}_k{k}_unitig.dists.txt", "w") as f:
         for i in range(num_colors):
             for j in range(i + 1, num_colors):
                 f.write(f"{names[i]}\t{names[j]}\t{unitig_dists[i, j]}\n")
 
-    with open(f"{out_prefix}/{dataset}_k{k}_kmer.dists.txt", "w") as f:
+    with open(f"{out_path}/{dataset}_k{k}_kmer.dists.txt", "w") as f:
         for i in range(num_colors):
             for j in range(i + 1, num_colors):
                 f.write(f"{names[i]}\t{names[j]}\t{kmer_dists[i, j]}\n")
 
-    with open(f"{out_prefix}/{dataset}_k{k}_unique_raw.dists.txt", "w") as f:
+    with open(f"{out_path}/{dataset}_k{k}_unique_raw.dists.txt", "w") as f:
         for i in range(num_colors):
             for j in range(i + 1, num_colors):
                 f.write(f"{names[i]}\t{names[j]}\t{unique_raw_dists[i, j]}\n")

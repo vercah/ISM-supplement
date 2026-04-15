@@ -11,4 +11,3 @@ dependencies:
   - joblib
   - xopen
   - progressbar2
-  - ete3

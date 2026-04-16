@@ -13,6 +13,11 @@
     * [Step 2: Configure pipeline parameters](#step-2-configure-pipeline-parameters)
     * [Step 3: Run the pipeline](#step-3-run-the-pipeline)
 * [Precomputed results](#precomputed-results)
+* [Pipeline workarounds and implementation notes](#pipeline-workarounds-and-implementation-notes)
+    * [Concorde TSP solver](#concorde-tsp-solver)
+    * [Phylogenetic tree inference and ordering extraction](#phylogenetic-tree-inference-and-ordering-extraction)
+    * [Fulgor indexing](#fulgor-indexing)
+    * [Randomized ordering](#randomized-ordering)
 
 <!-- vim-markdown-toc -->
 
@@ -21,7 +26,9 @@
 
 Supplementary material and experimental pipelines for the paper:
 
-> Veronika Hendrychová and Karel Břinda (2026). **Why phylogenies compress so well: combinatorial guarantees under the Infinite Sites Model**. *bioRxiv*. [https://doi.org/10.64898/2026.03.18.712055](https://doi.org/10.64898/2026.03.18.712055)
+> Veronika Hendrychová and Karel Břinda (2026). **Why phylogenies compress so well: combinatorial guarantees
+> under the Infinite Sites Model**. *bioRxiv* 2026.03.18.712055, 2026.
+> [https://doi.org/10.64898/2026.03.18.712055](https://doi.org/10.64898/2026.03.18.712055)
 
 BibTeX:
 
@@ -30,6 +37,7 @@ BibTeX:
   author = {Veronika Hendrychová and Karel Břinda},
   title = {Why phylogenies compress so well: combinatorial guarantees under the Infinite Sites Model},
   journal = {bioRxiv},
+  volumen = {2026.03.18.712055},
   year = {2026},
   doi = {10.64898/2026.03.18.712055},
   url = {https://doi.org/10.64898/2026.03.18.712055}
@@ -43,13 +51,27 @@ BibTeX:
 Create a dedicated Conda environment with all dependencies using [Bioconda](https://bioconda.github.io/):
 
 ```bash
-conda create -n ism -c bioconda -c conda-forge --override-channels \
-    python=3.12 \
-    snakemake fulgor attotree mash=2.3 \
-    numpy pandas joblib xopen progressbar2 ete3 \
-    libstdcxx-ng
+git clone https://github.com/vercah/ism-supplement
+cd ism-supplement
+
+# create the ism environment with conda
+conda env create -f environment.yml
+# alternative faster route: via mamba
+mamba env create -f environment.yml
+
 conda activate ism
 ```
+
+Now test if Fulgor functions correctly by `fulgor help`. If you see an error like `GLIBCXX_3.4.21' not found`
+(happens on some older Linux systems), run additionally
+
+```bash
+conda install libstdcxx-ng
+```
+
+The repository already vendors `galitime` `0.3.0` from the upstream GitHub release as the standalone
+executable `bin/galitime`, so no separate `galitime` installation is required.
+
 
 ### Concorde TSP solver
 
@@ -136,3 +158,48 @@ All results will be generated in the `11_runs/` directory.
 ## Precomputed results
 
 The file `final_data_1k.tsv` contains the aggregated results used to produce the figures and tables in the paper.
+
+
+## Pipeline workarounds and implementation notes
+
+The pipeline includes several workarounds to handle limitations of the tools it relies on, as well as implementation choices that are worth documenting.
+
+### Concorde TSP solver
+
+#### Cycle-to-path conversion via a dummy separator node
+
+Concorde solves the *cycle* version of TSP, but the pipeline needs a *path*. To convert between the two, a dummy node called `_DUMMY_CITY_SEPARATOR_` with zero-weight edges to all other nodes is prepended to every instance (`_export_tsp_instance.py`). This guarantees that the optimal cycle passes through the dummy for free, so removing it yields an optimal open path. The extraction script (`_extract_path_from_tsp_solution.py`) asserts the dummy is the first node in the solution and strips it.
+
+#### Padding small instances with dummy filler nodes
+
+For instances with fewer than 35 nodes, Concorde switches internally to a Held-Karp dynamic-programming routine (`CCheldkarp_small`) that imposes strict limits on edge-weight magnitude, which can cause solver failures. To force Concorde onto its general branch-and-cut code path, the pipeline duplicates the first node until the total number of nodes reaches 35 (`_export_tsp_instance.py`). Because all dummy filler nodes have zero mutual distance and identical distances to every real node, they form a contiguous block in any optimal tour and are removed after solving without affecting the real ordering (`_extract_path_from_tsp_solution.py` filters out all nodes whose name starts with `_DUMMY_`).
+
+#### Distance scaling to prevent arithmetic overflow
+
+When maximum pairwise Hamming distances exceed 10,000, the resulting optimal tour lengths can overflow Concorde's internal integer arithmetic (error `OVERFLOW in CCbigguy_addmult`). To prevent this, when any of the computed distances is `max_dist > 10000`, the pipeline uniformly scales all distances: `d' = max(1, round(d / (max_dist / 10000)))` (`_export_tsp_instance.py`). The `max(1, ...)` floor ensures no positive distance collapses to zero. This approximation may merge close distances into the same integer, but does not significantly affect results given the large original range.
+
+#### Worst-case instance by distance inversion
+
+To find the *worst* (maximum-runs) ordering using Concorde's minimization, all distances are inverted: `d' = D_max - d` (`_export_tsp_instance.py`). This converts the maximization problem into a minimization problem. The theoretical justification is given in the supplement of the preprint (Note S2).
+
+
+### Phylogenetic tree inference and ordering extraction
+
+#### Tree construction with attotree
+
+Trees are inferred by [attotree](https://github.com/karel-brinda/attotree) directly from the genome FASTA files (not from the Hamming distance matrices used for TSP). The pipeline evaluates two methods: **Neighbor-Joining (NJ)** and **UPGMA**, passed via the `-m` flag (`Snakefile`). Attotree computes its own sketch-based (Mash) distances internally.
+
+#### No rooting, ladderization, or polytomy resolution applied
+
+The tree postprocessing script (`_postprocess_tree.py`) *supports* midpoint rooting (`--midpoint-outgroup`), ladderization (`--ladderize`), and polytomy resolution (`--standardize`), but none of these are used in the pipeline and our experiments. This means the genome ordering is the raw leaf order from ete3's default tree traversal of the unmodified attotree output.
+
+#### Python recursion limit raised to 500,000
+
+Large phylogenetic trees cause deep recursion in ete3's traversal routines. The default Python recursion limit (1,000) is insufficient, so it is raised to 500,000 (`_postprocess_tree.py`).
+
+
+### Fulgor indexing
+
+#### File descriptor limit
+
+Fulgor may open many files simultaneously during index construction. The pipeline raises the soft file-descriptor limit to 4,096 before calling `fulgor build` (`Snakefile`).

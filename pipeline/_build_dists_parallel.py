@@ -107,12 +107,26 @@ def preprocess_color_sets(batch, color_sets):
     return member_batch
 
 
+def unique_row_batches(color_sets, batch_size):
+    # unique_row counts each dumped color set exactly once, unlike the
+    # unitig- and k-mer-weighted matrices above.
+    batch = []
+    for colors in color_sets.values():
+        batch.append((colors, 1))
+        if len(batch) >= batch_size:
+            yield batch
+            batch = []
+    if batch:
+        yield batch
+
+
 def build_and_compute(color_sets, unitigs_file, k, filenames_file, out_path,
                       dataset, total_kmers, cores, batch_size):
     names = load_names(filenames_file)
     num_colors = len(names)
     kmer_dists = np.zeros((num_colors, num_colors), dtype=np.int64)
     unitig_dists = np.zeros((num_colors, num_colors), dtype=np.int64)
+    unique_row_dists = np.zeros((num_colors, num_colors), dtype=np.int64)
 
     batch = []
     #    pbar = tqdm(desc="Processing kmers", unit="rows", total=total_kmers)
@@ -169,17 +183,29 @@ def build_and_compute(color_sets, unitigs_file, k, filenames_file, out_path,
         #    kmer_dists += np.sum(np.stack(matrices_k), axis=0)
         batch = []
 
+    for member_batch in unique_row_batches(color_sets, batch_size):
+        for u_matrix, _ in Parallel(
+                n_jobs=cores, backend="threading", return_as="generator")(
+                    delayed(process_batch)(subbatch, num_colors)
+                    for subbatch in subbatch_iterable(member_batch)):
+            unique_row_dists += u_matrix
+
     #print(f"Matrices merged, started writing", file=sys.stderr, flush=True)
 
-    with open(f"{out_prefix}/{dataset}_k{k}_unitig.dists.txt", "w") as f:
+    with open(f"{out_path}/{dataset}_k{k}_unitig.dists.txt", "w") as f:
         for i in range(num_colors):
             for j in range(i + 1, num_colors):
                 f.write(f"{names[i]}\t{names[j]}\t{unitig_dists[i, j]}\n")
 
-    with open(f"{out_prefix}/{dataset}_k{k}_kmer.dists.txt", "w") as f:
+    with open(f"{out_path}/{dataset}_k{k}_kmer.dists.txt", "w") as f:
         for i in range(num_colors):
             for j in range(i + 1, num_colors):
                 f.write(f"{names[i]}\t{names[j]}\t{kmer_dists[i, j]}\n")
+
+    with open(f"{out_path}/{dataset}_k{k}_uniqrow.dists.txt", "w") as f:
+        for i in range(num_colors):
+            for j in range(i + 1, num_colors):
+                f.write(f"{names[i]}\t{names[j]}\t{unique_row_dists[i, j]}\n")
 
 
 if __name__ == "__main__":

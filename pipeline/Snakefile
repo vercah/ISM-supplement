@@ -211,22 +211,6 @@ rule extract_tsp_order:
     """
 
 
-rule validate_orders:
-    input:
-        selection="03_selection/{dataset}.N{N}.txt",
-        orders=expand(
-            "10_orders/{{dataset}}_{method}_k{{k}}_N{{N}}_{{type}}.txt",
-            method=["upgma", "nj", "optimal", "worst", "randomized"],
-        ),
-    output:
-        stamp="10_orders/{dataset}_k{k}_N{N}_{type}.val",
-    shell:
-        """
-        ./_validate_orders.py --selection {input.selection} \
-            --out {output.stamp} {input.orders}
-    """
-
-
 # --------------------------------------
 # -----------------FINAL STATS---------------------
 # --------------------------------------
@@ -234,12 +218,21 @@ rule compute_final_runs:
     input:
         dists="07_ham_dists/{dataset}_k{k}_{type}.dists.txt.xz",
         order="10_orders/{dataset}_{method}_k{k}_N{N}_{type}.txt",
-        validated="10_orders/{dataset}_k{k}_N{N}_{type}.val",
     output:
         run="11_runs/{dataset}_{method}_k{k}_N{N}_{type}.runs",
     shell:
         """
-       ./_evaluate_order_nb_runs.py {input.dists} {input.order} \
+        # Validate: no duplicate genomes and line count matches N
+        n_lines=$(wc -l < {input.order})
+        n_unique=$(sort {input.order} | uniq | wc -l)
+        if [ "$n_lines" -ne "$n_unique" ]; then
+            echo "ERROR: duplicate genomes in {input.order}" >&2; exit 1
+        fi
+        if [ "$n_lines" -ne {wildcards.N} ]; then
+            echo "ERROR: {input.order} has $n_lines lines, expected {wildcards.N}" >&2; exit 1
+        fi
+
+        ./_evaluate_order_nb_runs.py {input.dists} {input.order} \
             --num-rows $(
                 if [ "{wildcards.type}" = "unitig" ]; then
                     grep '^num_unitigs=' 05_dumps/{wildcards.dataset}_k{wildcards.k}.metadata.txt | cut -d= -f2

@@ -287,7 +287,17 @@ rule compute_final_runs:
         experiment=lambda wc: f"final_runs_{wc.dataset}_{wc.method}_k{wc.k}_N{wc.N}_{wc.type}",
     shell:
         """
-        ../bin/galitime \\
+        # validation
+        n_lines=$(wc -l < {input.order})
+        n_unique=$(sort {input.order} | uniq | wc -l)
+        if [ "$n_lines" -ne "$n_unique" ]; then
+            echo "ERROR: duplicate genomes in {input.order}" >&2; exit 1
+        fi
+        if [ "$n_lines" -ne {wildcards.N} ]; then
+            echo "ERROR: {input.order} has $n_lines lines, expected {wildcards.N}" >&2; exit 1
+        fi
+
+         ../bin/galitime \\
             -l "{output.time}" \\
             -n "{params.experiment}" \\
             "./_evaluate_order_nb_runs.py \\

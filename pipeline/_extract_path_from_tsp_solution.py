@@ -41,19 +41,26 @@ def process(inst_fn, sol_fn):
         name for name in sorted_keys if not name.startswith("_DUMMY_")
     ]
 
-    # Remove consecutive duplicates from Concorde padding (n_real < 35 case)
-    deduped = [real_tour[0]] + [
-        real_tour[i] for i in range(1, len(real_tour))
-        if real_tour[i] != real_tour[i - 1]
-    ]
+    # Remove duplicates from Concorde padding (n_real < 35 case).
+    # Copies are usually consecutive, but distance rounding can cause
+    # another genome with identical rounded distances to be interleaved.
+    seen = set()
+    deduped = []
+    for name in real_tour:
+        if name not in seen:
+            seen.add(name)
+            deduped.append(name)
 
-    # Safety: non-consecutive duplicates should never happen
-    if len(deduped) != len(set(deduped)):
-        from collections import Counter
-        dupes = {k: v for k, v in Counter(deduped).items() if v > 1}
-        print(f"ERROR: non-consecutive duplicate genomes in tour: {dupes}",
-              file=sys.stderr)
-        sys.exit(1)
+    n_removed = len(real_tour) - len(deduped)
+    if n_removed > 0:
+        non_consec = len(real_tour) - len(deduped) - sum(
+            1 for i in range(1, len(real_tour))
+            if real_tour[i] == real_tour[i - 1]
+        )
+        if non_consec > 0:
+            print(f"WARNING: {non_consec} non-consecutive duplicate(s) "
+                  f"removed (likely caused by distance rounding)",
+                  file=sys.stderr)
 
     print(*deduped, sep="\n")
 

@@ -6,29 +6,6 @@ SHELL=/usr/bin/env bash -eo pipefail
 
 .SUFFIXES:
 
-ifeq ($(origin CXX), default)
-CXX = g++
-endif
-
-ifeq ($(origin CXXFLAGS), undefined)
-CXXFLAGS = -O3 -DNDEBUG -std=c++17 -march=native
-endif
-
-OMP_CXXFLAGS ?= -fopenmp
-OMP_CPPFLAGS ?=
-OMP_LDFLAGS ?=
-
-ifneq (,$(findstring clang,$(shell $(CXX) --version 2>/dev/null | head -n 1)))
-OMP_CXXFLAGS = -Xpreprocessor -fopenmp
-ifneq ($(wildcard /opt/homebrew/opt/libomp/include/omp.h),)
-OMP_CPPFLAGS = -I/opt/homebrew/opt/libomp/include
-OMP_LDFLAGS = -L/opt/homebrew/opt/libomp/lib -lomp
-else ifneq ($(wildcard /usr/local/opt/libomp/include/omp.h),)
-OMP_CPPFLAGS = -I/usr/local/opt/libomp/include
-OMP_LDFLAGS = -L/usr/local/opt/libomp/lib -lomp
-endif
-endif
-
 ##############
 ## Commands ##
 ##############
@@ -36,10 +13,10 @@ endif
 all:
 	snakemake -p -c all --rerun-incomplete --keep-going --show-failed-logs
 
-cpp: _build_dists_v3_cpp ## Build the C++ distance builder
+cpp: _build_dists_v4/_build_dists_v4 ## Build the C++ distance builder
 
-_build_dists_v3_cpp: _build_dists_v3.cpp ## Compile the C++ distance builder
-	$(CXX) $(CXXFLAGS) $(OMP_CXXFLAGS) $(OMP_CPPFLAGS) $< -o $@ $(OMP_LDFLAGS)
+_build_dists_v4/_build_dists_v4: _build_dists_v4/main.cpp _build_dists_v4/Makefile ## Compile the C++ distance builder
+	$(MAKE) -C _build_dists_v4 _build_dists_v4
 
 help: ## Print help messages
 	@echo -e "$$(grep -hE '^\S*(:.*)?##' $(MAKEFILE_LIST) \
@@ -68,7 +45,7 @@ clean: clean-cpp ## Clean
 	rm -vfr 04_indices/*/ 08_tsp/*/
 
 clean-cpp:
-	rm -f _build_dists_v3_cpp
+	$(MAKE) -C _build_dists_v4 clean
 
 cleanall: clean ## Clean all
 

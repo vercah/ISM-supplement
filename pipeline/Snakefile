@@ -44,6 +44,15 @@ def resolve_enabled_flags(name, value, defaults):
     return resolved
 
 
+def parse_config_int(name, default):
+    value = config.get(name, default)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(
+            f"Config key '{name}' must be an integer, not {type(value).__name__}."
+        )
+    return value
+
+
 default_matrix_flags = {matrix: True for matrix in KNOWN_MATRIX_TYPES}
 default_output_flags = {output: True for output in KNOWN_OUTPUTS}
 
@@ -59,6 +68,7 @@ output_flags = resolve_enabled_flags(
 )
 
 k_values = config.get("k_values", [31])  # 15, 18, 23, 31
+random_seed = parse_config_int("random_seed", 1)
 matrix_types = [matrix for matrix in KNOWN_MATRIX_TYPES if matrix_flags[matrix]]
 disabled_matrix_types = [
     matrix for matrix in KNOWN_MATRIX_TYPES if not matrix_flags[matrix]
@@ -103,9 +113,14 @@ rule randomization:
         txt="01_datasets/{dataset}.txt",
     output:
         txt="02_order_randomization/{dataset}.txt",
+    params:
+        seed=random_seed,
     shell:
         """
-        cat {input.txt} | sort -R > {output.txt}
+        ./_shuffle_lines_with_seed.py \
+            --seed {params.seed} \
+            {input.txt} \
+            {output.txt}
     """
 
 
@@ -323,9 +338,14 @@ rule get_randomized_order:
         selection="03_selection/{dataset}.N{N}.txt",
     output:
         rand="10_orders/{dataset}_randomized_k{k}_N{N}_{type}.txt",
+    params:
+        seed=random_seed,
     shell:
         """
-        cat {input.selection} | sort -R > {output.rand}
+        ./_shuffle_lines_with_seed.py \
+            --seed {params.seed} \
+            {input.selection} \
+            {output.rand}
     """
 
 

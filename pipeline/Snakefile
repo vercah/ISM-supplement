@@ -262,7 +262,12 @@ rule run_attotree:
         method=r"(nj|upgma)",
     threads: 8
     params:
-        experiment=lambda wc: f"attotree_{wc.dataset}_{wc.method}_N{wc.N}",
+        attotree_k=attotree_k,
+        attotree_s=attotree_s,
+        experiment=lambda wc: (
+            f"attotree_{wc.dataset}_{wc.method}_N{wc.N}_"
+            f"k{attotree_k}_s{attotree_s}"
+        ),
     shell:
         """
         ../bin/galitime \\
@@ -271,6 +276,8 @@ rule run_attotree:
             "attotree \\
                 -t {threads} \\
                 -m {wildcards.method} \\
+                -k {params.attotree_k} \\
+                -s {params.attotree_s} \\
                 -L {input.selection} \\
                 -V > {output.nw}"
         """

@@ -1,6 +1,8 @@
 import glob
 import os
 
+configfile: "config.yaml"
+
 REPO_ROOT = os.path.abspath(os.path.join(workflow.basedir, ".."))
 CONCORDE_BIN = os.path.abspath(
     os.path.join(REPO_ROOT, "bin", "concorde")
@@ -8,15 +10,70 @@ CONCORDE_BIN = os.path.abspath(
 if not os.path.exists(CONCORDE_BIN):
     raise FileNotFoundError(f"Concorde binary not found at {CONCORDE_BIN}")
 
-# Parameters
-k_values = [31]  # 15, 18, 23, 31
+KNOWN_MATRIX_TYPES = ("kmer", "unitig", "uniqrow")
+KNOWN_OUTPUTS = {
+    "best_tsp": "optimal",
+    "worst_tsp": "worst",
+    "nj_attotree": "nj",
+    "upgma_attotree": "upgma",
+    "randomized": "randomized",
+}
+
+
+def require_mapping(name, value):
+    if not isinstance(value, dict):
+        raise ValueError(f"Config key '{name}' must be a mapping.")
+    return value
+
+
+def validate_known_keys(name, value, known_keys):
+    unknown_keys = sorted(set(value) - set(known_keys))
+    if unknown_keys:
+        raise ValueError(
+            f"Unknown keys under '{name}': {', '.join(unknown_keys)}"
+        )
+
+
+def resolve_enabled_flags(name, value, defaults):
+    provided = require_mapping(name, value)
+    validate_known_keys(name, provided, defaults)
+    resolved = defaults.copy()
+    resolved.update(provided)
+    if not any(resolved.values()):
+        raise ValueError(f"At least one entry under '{name}' must be enabled.")
+    return resolved
+
+
+default_matrix_flags = {matrix: True for matrix in KNOWN_MATRIX_TYPES}
+default_output_flags = {output: True for output in KNOWN_OUTPUTS}
+
+matrix_flags = resolve_enabled_flags(
+    "matrices",
+    config.get("matrices", {}),
+    default_matrix_flags,
+)
+output_flags = resolve_enabled_flags(
+    "outputs",
+    config.get("outputs", {}),
+    default_output_flags,
+)
+
+k_values = config.get("k_values", [31])  # 15, 18, 23, 31
+matrix_types = [matrix for matrix in KNOWN_MATRIX_TYPES if matrix_flags[matrix]]
+enabled_methods = [
+    internal_name
+    for config_name, internal_name in KNOWN_OUTPUTS.items()
+    if output_flags[config_name]
+]
+attotree_k = config.get("attotree_k", 31)
+attotree_s = config.get("attotree_s", 10000)
+
 dataset_files = sorted(glob.glob(os.path.join("01_datasets", "*.txt")))
 g_values = [os.path.splitext(os.path.basename(path))[0] for path in dataset_files]
 if not g_values:
     raise FileNotFoundError(
         "No dataset files found in 01_datasets. Add one or more '*.txt' files first."
     )
-matrix_types = ["kmer", "unitig", "uniqrow"]
 dataset_sizes = {g: sum(1 for _ in open(f"01_datasets/{g}.txt")) for g in g_values}
 
 N_values = {g: [dataset_sizes[g]] for g in g_values}

@@ -1,0 +1,17 @@
+k_values:
+  - 31
+
+matrices:
+  kmer: true
+  unitig: true
+  uniqrow: true
+
+outputs:
+  best_tsp: true
+  worst_tsp: true
+  nj_attotree: true
+  upgma_attotree: true
+  randomized: true
+
+attotree_k: 31
+attotree_s: 10000

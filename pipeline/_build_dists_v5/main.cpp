@@ -1,6 +1,7 @@
 // C++ implementation skeleton for the next version.
 
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <cstdint>
 #include <filesystem>
@@ -100,16 +101,6 @@ static int parse_int_after_equals(const std::string& token) {
         throw std::runtime_error("malformed token: " + token);
     }
     return std::stoi(token.substr(pos + 1));
-}
-
-static void add_into(std::vector<int64_t>& dst, const std::vector<int64_t>& src) {
-    if (dst.size() != src.size()) {
-        throw std::runtime_error("internal size mismatch");
-    }
-
-    for (size_t i = 0; i < dst.size(); ++i) {
-        dst[i] += src[i];
-    }
 }
 
 struct Row {
@@ -329,22 +320,85 @@ public:
         std::vector<int64_t> uniqrow_marginal;
         compute_marginals(unitig_marginal, kmer_marginal, uniqrow_marginal);
 
-        std::ofstream unitig_out(dump_.output_file("unitig"));
-        std::ofstream kmer_out(dump_.output_file("kmer"));
-        std::ofstream uniqrow_out(dump_.output_file("uniqrow"));
+        const int n = dump_.num_samples();
+        const std::vector<std::string>& names = dump_.names();
+        const int num_blocks = (n + block_size_ - 1) / block_size_;
+        std::vector<std::string> name_prefixes;
+        name_prefixes.reserve(static_cast<size_t>(n));
+        size_t total_name_chars = 0;
+        for (const std::string& name : names) {
+            total_name_chars += name.size();
+            name_prefixes.push_back(name + '\t');
+        }
+        const size_t avg_name_chars =
+            n > 0 ? total_name_chars / static_cast<size_t>(n) : 0;
+
+        const fs::path unitig_path = dump_.output_file("unitig");
+        const fs::path kmer_path = dump_.output_file("kmer");
+        const fs::path uniqrow_path = dump_.output_file("uniqrow");
+        std::vector<BlockTextResult> block_texts(static_cast<size_t>(num_blocks));
+
+        std::atomic<bool> failed{false};
+        std::string error_message;
+
+#pragma omp parallel for schedule(dynamic)
+        for (int block_index = 0; block_index < num_blocks; ++block_index) {
+            if (failed.load(std::memory_order_relaxed)) {
+                continue;
+            }
+
+            try {
+                const int i0 = block_index * block_size_;
+                const int i1 = std::min(i0 + block_size_, n);
+                const BlockResult block = compute_block(i0, i1);
+                if (failed.load(std::memory_order_relaxed)) {
+                    continue;
+                }
+                block_texts[static_cast<size_t>(block_index)] =
+                    render_block_text(block, names, name_prefixes,
+                                      unitig_marginal, kmer_marginal, uniqrow_marginal,
+                                      i0, i1, n, avg_name_chars);
+            } catch (const std::exception& e) {
+#pragma omp critical
+                {
+                    if (!failed.load(std::memory_order_relaxed)) {
+                        failed.store(true, std::memory_order_relaxed);
+                        error_message = e.what();
+                    }
+                }
+            } catch (...) {
+#pragma omp critical
+                {
+                    if (!failed.load(std::memory_order_relaxed)) {
+                        failed.store(true, std::memory_order_relaxed);
+                        error_message = "unknown error while computing block output";
+                    }
+                }
+            }
+        }
+
+        if (failed.load(std::memory_order_relaxed)) {
+            throw std::runtime_error(error_message);
+        }
+
+        std::ofstream unitig_out(unitig_path, std::ios::binary);
+        std::ofstream kmer_out(kmer_path, std::ios::binary);
+        std::ofstream uniqrow_out(uniqrow_path, std::ios::binary);
         if (!unitig_out || !kmer_out || !uniqrow_out) {
             throw std::runtime_error("failed to open output files");
         }
 
-        const int n = dump_.num_samples();
-        const std::vector<std::string>& names = dump_.names();
+        for (const BlockTextResult& block_text : block_texts) {
+            unitig_out.write(block_text.unitig_text.data(),
+                             static_cast<std::streamsize>(block_text.unitig_text.size()));
+            kmer_out.write(block_text.kmer_text.data(),
+                           static_cast<std::streamsize>(block_text.kmer_text.size()));
+            uniqrow_out.write(block_text.uniqrow_text.data(),
+                              static_cast<std::streamsize>(block_text.uniqrow_text.size()));
+        }
 
-        for (int i0 = 0; i0 < n; i0 += block_size_) {
-            const int i1 = std::min(i0 + block_size_, n);
-            BlockResult block = compute_block(i0, i1);
-            write_block(unitig_out, names, unitig_marginal, block.unitig, i0, i1, n);
-            write_block(kmer_out, names, kmer_marginal, block.kmer, i0, i1, n);
-            write_block(uniqrow_out, names, uniqrow_marginal, block.uniqrow, i0, i1, n);
+        if (!unitig_out || !kmer_out || !uniqrow_out) {
+            throw std::runtime_error("failed while writing output files");
         }
     }
 
@@ -353,6 +407,12 @@ private:
         std::vector<int64_t> unitig;
         std::vector<int64_t> kmer;
         std::vector<int64_t> uniqrow;
+    };
+
+    struct BlockTextResult {
+        std::string unitig_text;
+        std::string kmer_text;
+        std::string uniqrow_text;
     };
 
     void compute_marginals(std::vector<int64_t>& unitig,
@@ -386,80 +446,109 @@ private:
         result.uniqrow.assign(block_area, 0);
 
         const std::vector<Row>& rows = dump_.rows();
-
-#pragma omp parallel
-        {
-            std::vector<int64_t> local_unitig(block_area, 0);
-            std::vector<int64_t> local_kmer(block_area, 0);
-            std::vector<int64_t> local_uniqrow(block_area, 0);
-
-#pragma omp for schedule(guided)
-            for (size_t row_index = 0; row_index < rows.size(); ++row_index) {
-                const Row& row = rows[row_index];
-                if (row.colors.empty()) {
-                    continue;
-                }
-
-                if (row.colors.front() >= i1 || row.colors.back() < i0) {
-                    continue;
-                }
-
-                const auto first = std::lower_bound(row.colors.begin(), row.colors.end(), i0);
-                if (first == row.colors.end()) {
-                    continue;
-                }
-
-                const int64_t unitig_weight = row.unitig_weight;
-                const int64_t kmer_weight = row.kmer_weight;
-
-                for (auto it = first; it != row.colors.end() && *it < i1; ++it) {
-                    const size_t offset = static_cast<size_t>(*it - i0) * static_cast<size_t>(n);
-                    int64_t* unitig_row = local_unitig.data() + offset;
-                    int64_t* kmer_row = local_kmer.data() + offset;
-                    int64_t* uniqrow_row = local_uniqrow.data() + offset;
-
-                    if (unitig_weight != 0) {
-                        for (int sample : row.colors) {
-                            unitig_row[sample] += unitig_weight;
-                        }
-                    }
-                    if (kmer_weight != 0) {
-                        for (int sample : row.colors) {
-                            kmer_row[sample] += kmer_weight;
-                        }
-                    }
-                    for (int sample : row.colors) {
-                        uniqrow_row[sample] += 1;
-                    }
-                }
+        for (const Row& row : rows) {
+            if (row.colors.empty()) {
+                continue;
             }
 
-#pragma omp critical
-            {
-                add_into(result.unitig, local_unitig);
-                add_into(result.kmer, local_kmer);
-                add_into(result.uniqrow, local_uniqrow);
+            if (row.colors.front() >= i1 || row.colors.back() < i0) {
+                continue;
+            }
+
+            const auto lo = std::lower_bound(row.colors.begin(), row.colors.end(), i0);
+            if (lo == row.colors.end()) {
+                continue;
+            }
+
+            const auto hi = std::lower_bound(lo, row.colors.end(), i1);
+            if (lo == hi) {
+                continue;
+            }
+
+            const int64_t unitig_weight = row.unitig_weight;
+            const int64_t kmer_weight = row.kmer_weight;
+
+            for (auto it = lo; it != hi; ++it) {
+                const size_t offset = static_cast<size_t>(*it - i0) * static_cast<size_t>(n);
+                int64_t* unitig_row = result.unitig.data() + offset;
+                int64_t* kmer_row = result.kmer.data() + offset;
+                int64_t* uniqrow_row = result.uniqrow.data() + offset;
+
+                // row.colors is sorted, so the suffix after i is exactly the j > i frontier.
+                for (auto jt = std::next(it); jt != row.colors.end(); ++jt) {
+                    const int sample = *jt;
+                    unitig_row[sample] += unitig_weight;
+                    kmer_row[sample] += kmer_weight;
+                    uniqrow_row[sample] += 1;
+                }
             }
         }
 
         return result;
     }
 
-    static void write_block(std::ofstream& out,
-                            const std::vector<std::string>& names,
-                            const std::vector<int64_t>& marginal,
-                            const std::vector<int64_t>& cooc,
-                            int i0,
-                            int i1,
-                            int n) {
+    static void append_distance_line(std::string& out,
+                                     const std::string& name_prefix,
+                                     const std::string& other_name,
+                                     int64_t dist) {
+        out.append(name_prefix);
+        out.append(other_name);
+        out.push_back('\t');
+        out.append(std::to_string(dist));
+        out.push_back('\n');
+    }
+
+    static size_t estimate_block_text_bytes(int i0,
+                                            int i1,
+                                            int n,
+                                            size_t avg_name_chars) {
+        const size_t block_len = static_cast<size_t>(i1 - i0);
+        const size_t pair_count =
+            block_len * static_cast<size_t>(2 * n - i0 - i1 - 1) / 2;
+        const size_t approx_line_bytes = 2 * avg_name_chars + 24;
+        return pair_count * approx_line_bytes;
+    }
+
+    static BlockTextResult render_block_text(const BlockResult& block,
+                                             const std::vector<std::string>& names,
+                                             const std::vector<std::string>& name_prefixes,
+                                             const std::vector<int64_t>& unitig_marginal,
+                                             const std::vector<int64_t>& kmer_marginal,
+                                             const std::vector<int64_t>& uniqrow_marginal,
+                                             int i0,
+                                             int i1,
+                                             int n,
+                                             size_t avg_name_chars) {
+        BlockTextResult text;
+        const size_t reserve_bytes = estimate_block_text_bytes(i0, i1, n, avg_name_chars);
+        text.unitig_text.reserve(reserve_bytes);
+        text.kmer_text.reserve(reserve_bytes);
+        text.uniqrow_text.reserve(reserve_bytes);
+
         for (int i = i0; i < i1; ++i) {
+            const std::string& name_prefix = name_prefixes[static_cast<size_t>(i)];
             const int local_i = i - i0;
-            const int64_t* cooc_row = cooc.data() + static_cast<size_t>(local_i) * static_cast<size_t>(n);
+            const int64_t* unitig_row =
+                block.unitig.data() + static_cast<size_t>(local_i) * static_cast<size_t>(n);
+            const int64_t* kmer_row =
+                block.kmer.data() + static_cast<size_t>(local_i) * static_cast<size_t>(n);
+            const int64_t* uniqrow_row =
+                block.uniqrow.data() + static_cast<size_t>(local_i) * static_cast<size_t>(n);
             for (int j = i + 1; j < n; ++j) {
-                const int64_t dist = marginal[i] + marginal[j] - 2 * cooc_row[j];
-                out << names[i] << '\t' << names[j] << '\t' << dist << '\n';
+                const int64_t unitig_dist =
+                    unitig_marginal[i] + unitig_marginal[j] - 2 * unitig_row[j];
+                const int64_t kmer_dist =
+                    kmer_marginal[i] + kmer_marginal[j] - 2 * kmer_row[j];
+                const int64_t uniqrow_dist =
+                    uniqrow_marginal[i] + uniqrow_marginal[j] - 2 * uniqrow_row[j];
+                const std::string& other_name = names[static_cast<size_t>(j)];
+                append_distance_line(text.unitig_text, name_prefix, other_name, unitig_dist);
+                append_distance_line(text.kmer_text, name_prefix, other_name, kmer_dist);
+                append_distance_line(text.uniqrow_text, name_prefix, other_name, uniqrow_dist);
             }
         }
+
+        return text;
     }
 
     const FulgorDump& dump_;

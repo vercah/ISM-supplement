@@ -1,0 +1,7 @@
+experiment	run	real_s	real_s_py	user_s	sys_s	percent_cpu	max_ram_kb	fs_inputs	fs_outputs	exit_code	command	max_ram_kb_alt
+build_dists_v1_gisp_k31	None	217.44	217.447587	863.22	169.43	None	3514089	None	None	0	./_build_dists_v1.py 05_dumps gisp 31 07_ham_dists/v1 10	1295
+build_dists_v2_gisp_k31	None	197.26	197.269125	836.36	171.08	None	935707	None	None	0	./_build_dists_v2.py 05_dumps gisp 31 07_ham_dists/v2 10	1311
+build_dists_v3_gisp_k31	None	164.11	164.176392	153.02	6.78	None	2395095	None	None	0	./_build_dists_v3.py 05_dumps gisp 31 07_ham_dists/v3 10	1295
+build_dists_v4_gisp_k31	None	16.91	16.918462	110.90	0.74	None	443711	None	None	0	./_build_dists_v4/_build_dists_v4 05_dumps gisp 31 07_ham_dists/v4 10	1295
+build_dists_v5_gisp_k31	None	15.17	15.183461	29.24	0.21	None	420217	None	None	0	./_build_dists_v5/_build_dists_v5 05_dumps gisp 31 07_ham_dists/v5 10	1295
+build_dists_v6_gisp_k31	None	8.56	8.572949	50.72	1.59	None	1670119	None	None	0	./_build_dists_v6/_build_dists_v6 05_dumps gisp 31 07_ham_dists/v6 10	1295

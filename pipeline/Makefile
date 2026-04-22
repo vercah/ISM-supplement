@@ -1,4 +1,4 @@
-.PHONY: all help clean cleanall view report
+.PHONY: all help clean cleanall view report cpp clean-cpp
 
 SHELL=/usr/bin/env bash -eo pipefail
 
@@ -13,6 +13,11 @@ SHELL=/usr/bin/env bash -eo pipefail
 all:
 	snakemake -p -c all --rerun-incomplete --keep-going --show-failed-logs
 
+cpp: _build_dists_v4/_build_dists_v4 ## Build the C++ distance builder
+
+_build_dists_v4/_build_dists_v4: _build_dists_v4/main.cpp _build_dists_v4/Makefile ## Compile the C++ distance builder
+	$(MAKE) -C _build_dists_v4 _build_dists_v4
+
 help: ## Print help messages
 	@echo -e "$$(grep -hE '^\S*(:.*)?##' $(MAKEFILE_LIST) \
 		| sed \
@@ -26,7 +31,7 @@ help: ## Print help messages
 report:
 	snakemake --report report.html
 
-clean: ## Clean
+clean: clean-cpp ## Clean
 	rm -fv \
 		02_order_randomization/*.txt \
 		03_selection/*.txt \
@@ -38,6 +43,9 @@ clean: ## Clean
 		10_orders/{*.txt,*.time,*.time.tmp} \
 		11_runs/{*.runs,*.time,*.time.tmp}
 	rm -vfr 04_indices/*/ 08_tsp/*/
+
+clean-cpp:
+	$(MAKE) -C _build_dists_v4 clean
 
 cleanall: clean ## Clean all
 

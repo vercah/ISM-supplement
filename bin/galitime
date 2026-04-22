@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 #
+# Supported Python versions for this top-level executable:
+# - Python 3.8-3.14, on Linux and macOS.
+#
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2024- Karel Brinda
 """
@@ -40,6 +43,7 @@ import os
 import shlex
 import re
 import shutil
+import statistics
 import subprocess
 import sys
 import tempfile
@@ -50,7 +54,7 @@ from pathlib import Path
 
 PROGRAM = 'galitime'
 DESC = 'benchmarking of computational experiments using GNU time'
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 __author__ = "Karel Brinda"
 __email__ = "karel.brinda@inria.fr"
 __license__ = "MIT"
@@ -61,32 +65,154 @@ DEFAULT_l = "stderr"
 DEFAULT_r = 1
 DEFAULT_s = '/usr/bin/env bash'
 DEFAULT_s = shutil.which('bash')
+NA_VALUE = "NA"
+STATUS_OK = "ok"
+STATUS_FAILED = "failed"
+STATUS_TIMEOUT = "timeout"
+STATUS_TIMING_ERROR = "timing_error"
+BACKEND_GNU = "gnu"
+BACKEND_GTIME = "gtime"
+BACKEND_BSD = "bsd"
+COMPACT_COLUMNS = (
+    "experiment",
+    "run",
+    "real_s",
+    "user_s",
+    "sys_s",
+    "cpu_s",
+    "cpu_pct",
+    "max_ram_kb",
+    "status",
+    "exit_code",
+    "command",
+)
+EXTENDED_COLUMNS = (
+    "experiment",
+    "run",
+    "real_s",
+    "user_s",
+    "sys_s",
+    "cpu_s",
+    "cpu_pct",
+    "max_ram_kb",
+    "backend",
+    "fs_input_ops",
+    "fs_output_ops",
+    "major_page_faults",
+    "minor_page_faults",
+    "swaps",
+    "status",
+    "exit_code",
+    "command",
+)
+ALL_COLUMNS = EXTENDED_COLUMNS
+
+BASE_STATS_NUMERIC_METRICS = (
+    "real_s", "user_s", "sys_s", "cpu_s", "cpu_pct", "max_ram_kb"
+)
+EXTENDED_STATS_NUMERIC_METRICS = BASE_STATS_NUMERIC_METRICS + (
+    "fs_input_ops", "fs_output_ops", "major_page_faults", "minor_page_faults", "swaps"
+)
+STATS_PREFIX_COLUMNS = (
+    "experiment",
+    "runs_requested",
+    "runs_completed",
+    "runs_summarized",
+    "runs_ok",
+    "runs_failed",
+    "runs_timeout",
+    "runs_timing_error",
+    "final_status",
+    "final_exit_code",
+)
+STATS_SUFFIX_COLUMNS = ("command",)
+STATS_AGGS = ("mean", "stddev", "min", "median", "max")
+
+
+def make_stats_columns(metrics):
+    columns = list(STATS_PREFIX_COLUMNS)
+    for metric in metrics:
+        for agg in STATS_AGGS:
+            columns.append(f"{metric}_{agg}")
+    columns.extend(STATS_SUFFIX_COLUMNS)
+    return tuple(columns)
+
+
+BASE_STATS_COLUMNS = make_stats_columns(BASE_STATS_NUMERIC_METRICS)
+EXTENDED_STATS_COLUMNS = make_stats_columns(EXTENDED_STATS_NUMERIC_METRICS)
+
+
+def log_debug(enabled, message):
+    if enabled:
+        timestamp = datetime.datetime.now().isoformat(timespec="seconds")
+        prefix = f"[{PROGRAM} {timestamp}]"
+        if sys.stderr.isatty():
+            prefix = f"\033[1m{prefix}\033[0m"
+        print(f"{prefix} {message}", file=sys.stderr, flush=True)
+
+
+def split_cli_argv(parser, argv):
+    flag_options = set()
+    value_options = set()
+    long_value_options = set()
+    for action in parser._actions:
+        if not action.option_strings:
+            continue
+        if action.nargs == 0:
+            flag_options.update(action.option_strings)
+        else:
+            value_options.update(action.option_strings)
+            long_value_options.update(x for x in action.option_strings if x.startswith("--"))
+
+    option_argv = []
+    i = 0
+    while i < len(argv):
+        arg = argv[i]
+        if arg == "--":
+            return option_argv, argv[i + 1:], False
+        if arg in flag_options:
+            option_argv.append(arg)
+            i += 1
+            continue
+        if arg in value_options:
+            option_argv.append(arg)
+            if i + 1 < len(argv):
+                option_argv.append(argv[i + 1])
+                i += 2
+            else:
+                i += 1
+            continue
+        if any(arg.startswith(f"{opt}=") for opt in long_value_options):
+            option_argv.append(arg)
+            i += 1
+            continue
+        if arg.startswith("-") and arg != "-":
+            # Hand ambiguous or unknown leading option-like tokens back to argparse
+            # so it can emit its normal diagnostics and handle its own accepted forms.
+            return None, None, True
+        return option_argv, argv[i:], False
+    return option_argv, [], False
 
 
 # IMPORTANT NOTE: some results are parsed from text files so no assumptions should be made
 # the integers being converted to int from str
 class TimingResult:
-
-    def __init__(self, experiment=None, run=None, command=None):
+    def __init__(self, experiment=None, run=None, command=None, extended=False, backend=None):
         """Setup all the fields
         """
+        self.extended = extended
         self._data = collections.OrderedDict()
 
         # 1. prefill table with the mandatory fields in the right order
-        mandatory_columns = (
-            "experiment", "run", "real_s", "real_s_py", "user_s", "sys_s", "percent_cpu",
-            "max_ram_kb", "fs_inputs", "fs_outputs", "exit_code", "command"
-        )
-        for x in mandatory_columns:
-            self.add(x, None)
+        for x in ALL_COLUMNS:
+            self.add(x, NA_VALUE)
 
         # 2. insert experiment parameters
         self.set('experiment', experiment)
         self.set('run', run)
         self.set('command', command)
-
-    def bin_to_si(self, key):
-        self._data[key] = int(round(int(self._data[key]) * 1.024))
+        if backend is not None:
+            self.set('backend', backend)
 
     def __getitem__(self, key):
         return self._data[key]
@@ -97,11 +223,11 @@ class TimingResult:
 
     def set(self, key, value):
         assert key in self._data, f"The key '{key}' is not in the TimingResult dict after initialization, likely a bug (present keys: {self._data.keys()})"
-        self._data[key] = value
+        self._data[key] = NA_VALUE if value is None else value
 
     def add(self, key, value):
         assert key not in self._data, f"The key '{key}' is already in the TimingResult dict after initialization, likely a bug (present keys: {self._data.keys()})"
-        self._data[key] = value
+        self._data[key] = NA_VALUE if value is None else value
 
     def __delitem__(self, key):
         del self._data[key]
@@ -112,20 +238,33 @@ class TimingResult:
     def __repr__(self):
         return repr(self._data)
 
+    @staticmethod
+    def _format_printed_value(key, value):
+        if key == "cpu_pct" and value != NA_VALUE:
+            return f"{value}%"
+        return value
+
     def __str__(self):
-        return "\t".join(map(str, self._data.keys())
-                         ) + "\n" + "\t".join(map(str, self._data.values()))
+        columns = EXTENDED_COLUMNS if self.extended else COMPACT_COLUMNS
+        printed_values = [
+            self._format_printed_value(k, self._data[k]) for k in columns
+        ]
+        return "\t".join(columns) + "\n" + "\t".join(map(str, printed_values))
 
 
 class AbstractTime(ABC):
 
-    def __init__(self, command, shell, experiment, time):
+    def __init__(self, command, shell, experiment, time, extended=False, backend_name=None, debug=False):
         self.time_command = time
         self.shell = shell
         self.experiment = experiment
+        self.extended = extended
+        self.backend_name = backend_name
+        self.debug = debug
         self.command = command
-        self.command_simpl = " ".join(command.replace("\\\n", " ").strip().split())
         self.tmp_dir = tempfile.TemporaryDirectory()
+        self._dlog(f"temporary directory: {self.tmp_dir.name!r}")
+        self._dlog(f"time command: {self.time_command!r}")
         self.results = []  # all processed results
         self.current_i = 0
         self.current_result = None  # currrent result
@@ -135,6 +274,9 @@ class AbstractTime(ABC):
         tmp_dir = getattr(self, "tmp_dir", None)
         if tmp_dir is not None:
             tmp_dir.cleanup()
+
+    def _dlog(self, message):
+        log_debug(self.debug, message)
 
     @staticmethod
     def _normalize_exit_code(exit_code):
@@ -149,20 +291,61 @@ class AbstractTime(ABC):
         """
         for i in range(times):
             self.current_i += 1
-            run = None if times == 1 else self.current_i
+            run = self.current_i
+            self._dlog(f"run {run}/{times}: starting")
             self.current_result = TimingResult(
-                experiment=self.experiment, run=run, command=self.command_simpl
+                experiment=self.experiment,
+                run=run,
+                command=self.command,
+                extended=self.extended,
+                backend=self.backend_name,
             )
 
-            self._execute_time()
-            self._parse_result()
+            try:
+                self._dlog(f"run {run}/{times}: executing wrapped command")
+                self._execute_time()
+                self._dlog(f"run {run}/{times}: parsing result")
+                self._parse_result()
+                self._dlog(f"run {run}/{times}: computing CPU time")
+                self._set_cpu_time()
+                self._dlog(f"run {run}/{times}: computing CPU percentage")
+                self._set_cpu_pct()
+                self._dlog(f"run {run}/{times}: setting status")
+                self._set_status()
+            except Exception as err:
+                self._dlog(f"timing exception: {type(err).__name__}: {err!r}")
+                self.current_result.set("status", STATUS_TIMING_ERROR)
+                print(f"Galitime error: timing error ({err})", file=sys.stderr)
+                self.final_exit_code = 1
+                self._dlog(f"run {run}/{times}: saving result")
+                self._save_result()
+                self._dlog(
+                    f"run {run}/{times}: final status={self.current_result['status']}, "
+                    f"exit_code={self.current_result['exit_code']}"
+                )
+                break
+
+            self._dlog(f"run {run}/{times}: saving result")
             self._save_result()
 
-            exit_code = int(self.current_result['exit_code'])
-            if exit_code != 0:
+            status = self.current_result["status"]
+            self._dlog(
+                f"run {run}/{times}: final status={status}, "
+                f"exit_code={self.current_result['exit_code']}"
+            )
+            if status == STATUS_OK:
+                continue
+
+            if status == STATUS_FAILED:
+                exit_code = int(self.current_result['exit_code'])
                 print(f"Galitime error: non-zero exit code ({exit_code})", file=sys.stderr)
                 self.final_exit_code = exit_code
-                break
+            elif status == STATUS_TIMEOUT:
+                print("Galitime error: command timed out", file=sys.stderr)
+                self.final_exit_code = 124
+            else:
+                self.final_exit_code = 1
+            break
             #
             # TODO: Add error treatment based on the user pre-specified failure mode
             # See https://github.com/karel-brinda/galitime/issues/25
@@ -181,42 +364,78 @@ class AbstractTime(ABC):
         """Execute time, whatever command it is
         """
 
+        timing_output_fn = self.current_tmp_fn()
+        exit_code_fn = self.current_exit_code_fn()
+        self._dlog(f"timing output filename: {timing_output_fn!r}")
+        self._dlog(f"exit-code filename: {exit_code_fn!r}")
+        # The shell trap is the canonical source of truth for the benchmarked command exit code.
         command_script = (
-            f'galitime_exit_code_file={shlex.quote(self.current_exit_code_fn())}; '
+            f'galitime_exit_code_file={shlex.quote(exit_code_fn)}; '
             'trap \'printf "%s\\n" "$?" > "$galitime_exit_code_file"\' EXIT; '
             f'{self.command}'
         )
+        self._dlog(f"command_script: {command_script!r}")
         wrapped_command = f'{self.wrapper()} {shlex.quote(self.shell)} -c {shlex.quote(command_script)}'
-        #print(f"Running '{wrapped_command}'")
+        self._dlog(f"wrapped command: {wrapped_command!r}")
 
         main_process = subprocess.Popen(wrapped_command, shell=True, executable=self.shell)
+        self._dlog(f"subprocess pid: {main_process.pid}")
 
         #TODO: integrate timeout into the whole method
         timeout = None
-        start_time = datetime.datetime.now()
+        timed_out = False
         try:
             # comment: returncode not the same as int (see https://docs.python.org/3/library/subprocess.html#subprocess.Popen.returncode)
             exit_code = self._normalize_exit_code(int(main_process.wait(timeout=timeout)))
+            self._dlog(f"wait return code: {exit_code}")
         except subprocess.TimeoutExpired:
-            exit_code = -1  # timeout
-        end_time = datetime.datetime.now()
+            timed_out = True
+            exit_code = None
+            self._dlog(f"timeout while waiting for process after {timeout!r}")
         try:
-            with open(self.current_exit_code_fn()) as exit_code_fo:
+            with open(exit_code_fn) as exit_code_fo:
                 exit_code_lines = [x.strip() for x in exit_code_fo if x.strip()]
         except FileNotFoundError:
             exit_code_lines = []
+        self._dlog(f"exit-code file lines: {exit_code_lines!r}")
         if exit_code_lines:
             if len(exit_code_lines) != 1:
                 raise RuntimeError(f"Unexpected exit code output shape: {exit_code_lines!r}")
             exit_code = int(exit_code_lines[0])
-        self.current_result.set("real_s_py", (end_time - start_time).total_seconds())
+        if timed_out and exit_code is None:
+            self.current_result.set("status", STATUS_TIMEOUT)
         self.current_result.set("exit_code", exit_code)
+        self._dlog(f"final recorded exit code: {exit_code}")
 
         ## TODO: different treating based on the expected behaviour
 
     @abstractmethod
     def _parse_result(self):
         pass
+
+    def _set_cpu_time(self):
+        # cpu_s is always derived from the parsed user/sys values in the common path.
+        user_s = float(self.current_result["user_s"])
+        sys_s = float(self.current_result["sys_s"])
+        self.current_result.set("cpu_s", user_s + sys_s)
+
+    def _set_cpu_pct(self):
+        # cpu_pct is always derived from the parsed real/user/sys values in the common path.
+        real_s = float(self.current_result["real_s"])
+        cpu_s = float(self.current_result["cpu_s"])
+        if real_s <= 0:
+            self.current_result.set("cpu_pct", None)
+        else:
+            self.current_result.set("cpu_pct", 100.0 * cpu_s / real_s)
+
+    def _set_status(self):
+        if self.current_result["status"] != NA_VALUE:
+            return
+        exit_code = int(self.current_result["exit_code"])
+        if exit_code == 0:
+            self.current_result.set("status", STATUS_OK)
+        else:
+            self.current_result.set("status", STATUS_FAILED)
 
     def _save_result(self):
         self.results.append(self.current_result)
@@ -232,21 +451,125 @@ class AbstractTime(ABC):
         return "\n".join(unique_list)
 
 
+def _get_stats_value(results, key):
+    if not results:
+        return NA_VALUE
+    value = results[0][key]
+    return NA_VALUE if value == NA_VALUE else value
+
+
+def _get_numeric_stats_values(results, metric):
+    values = []
+    for result in results:
+        value = result[metric]
+        if value == NA_VALUE:
+            continue
+        values.append(float(value))
+    return values
+
+
+def build_stats_row(timing, runs_requested, extended=False):
+    results = timing.results
+    summarized_results = [result for result in results if result["status"] == STATUS_OK]
+    status_counts = collections.Counter(result["status"] for result in results)
+    metrics = (
+        EXTENDED_STATS_NUMERIC_METRICS if extended else BASE_STATS_NUMERIC_METRICS
+    )
+    columns = EXTENDED_STATS_COLUMNS if extended else BASE_STATS_COLUMNS
+
+    row = collections.OrderedDict()
+    row["experiment"] = _get_stats_value(results, "experiment")
+    row["runs_requested"] = runs_requested
+    row["runs_completed"] = len(results)
+    row["runs_summarized"] = len(summarized_results)
+    row["runs_ok"] = status_counts.get(STATUS_OK, 0)
+    row["runs_failed"] = status_counts.get(STATUS_FAILED, 0)
+    row["runs_timeout"] = status_counts.get(STATUS_TIMEOUT, 0)
+    row["runs_timing_error"] = status_counts.get(STATUS_TIMING_ERROR, 0)
+    row["final_status"] = results[-1]["status"] if results else NA_VALUE
+    row["final_exit_code"] = timing.get_final_exit_code()
+
+    for metric in metrics:
+        values = _get_numeric_stats_values(summarized_results, metric)
+        if not values:
+            for agg in STATS_AGGS:
+                row[f"{metric}_{agg}"] = NA_VALUE
+            continue
+        row[f"{metric}_mean"] = statistics.mean(values)
+        row[f"{metric}_stddev"] = statistics.stdev(values) if len(values) >= 2 else NA_VALUE
+        row[f"{metric}_min"] = min(values)
+        row[f"{metric}_median"] = statistics.median(values)
+        row[f"{metric}_max"] = max(values)
+
+    row["command"] = _get_stats_value(results, "command")
+
+    assert tuple(row.keys()) == columns
+    return row
+
+
+def render_stats_tsv(timing, runs_requested, extended=False):
+    row = build_stats_row(timing=timing, runs_requested=runs_requested, extended=extended)
+    stats_columns = EXTENDED_STATS_COLUMNS if extended else BASE_STATS_COLUMNS
+    return "\n".join(
+        f"{column}\t{row[column]}"
+        for column in stats_columns
+    )
+
+
+def normalize_max_ram_kb(raw_value, raw_unit):
+    raw_value = int(raw_value)
+    if raw_unit == "bytes":
+        return int(round(raw_value / 1000.0))
+    if raw_unit == "kib":
+        return int(round(raw_value * 1024.0 / 1000.0))
+    raise ValueError(f"Unsupported memory unit: {raw_unit}")
+
+
 class GnuTime(AbstractTime):
 
-    def __init__(self, command, shell, time="/usr/bin/env time", experiment=None):
-        super().__init__(command=command, time=time, shell=shell, experiment=experiment)
-
-        self.gtime_columns_spec = "%e\t%U\t%S\t%P\t%M\t%x\t%I\t%O"
-        self.gtime_columns = (
-            "real_s", "user_s", "sys_s", "percent_cpu", "max_ram_kb", "exit_code", "fs_inputs",
-            "fs_outputs"
+    def __init__(
+        self,
+        command,
+        shell,
+        time="/usr/bin/env time",
+        experiment=None,
+        max_ram_raw_unit="kib",
+        extended=False,
+        backend_name=BACKEND_GNU,
+        debug=False,
+    ):
+        super().__init__(
+            command=command,
+            time=time,
+            shell=shell,
+            experiment=experiment,
+            extended=extended,
+            backend_name=backend_name,
+            debug=debug,
         )
+
+        self.gtime_columns_spec = "%e\t%U\t%S\t%P\t%M\t%I\t%O\t%F\t%R\t%W"
+        self.gtime_columns = (
+            "real_s",
+            "user_s",
+            "sys_s",
+            "percent_cpu",
+            "max_ram_kb",
+            "fs_input_ops",
+            "fs_output_ops",
+            "major_page_faults",
+            "minor_page_faults",
+            "swaps",
+        )
+        self.max_ram_raw_unit = max_ram_raw_unit
         self.wrapper = lambda: f'{self.time_command} -o {self.current_tmp_fn()} -f "{self.gtime_columns_spec}"'
 
     def _parse_result(self):
-        with open(self.current_tmp_fn()) as tmp_fo:
+        tmp_fn = self.current_tmp_fn()
+        self._dlog(f"reading GNU time output from: {tmp_fn!r}")
+        with open(tmp_fn) as tmp_fo:
             gtime_output_lines = [x.strip() for x in tmp_fo if x.strip()]
+        self._dlog(f"raw non-empty lines: {gtime_output_lines!r}")
         gtime_output_values = None
         for line in reversed(gtime_output_lines):
             values = line.split("\t")
@@ -255,30 +578,47 @@ class GnuTime(AbstractTime):
                 break
         if gtime_output_values is None:
             raise RuntimeError(f"Unexpected GNU time output shape: {gtime_output_lines!r}")
-        # GNU time's %x is useful for metrics/debugging, but the shell wait status is the canonical exit code.
+        self._dlog(f"parsed values selected: {gtime_output_values!r}")
+        # Exit code comes from the shell trap, and cpu_pct is always recomputed later
+        # from the parsed real/user/sys values. GNU %P is ignored for final output.
         for k, v in zip(self.gtime_columns, gtime_output_values):
-            if k == "exit_code":
+            if k == "percent_cpu":
+                self._dlog(f"parsed GNU percent CPU: {v!r}")
                 continue
             self.current_result.set(k, v)
-        self.current_result.bin_to_si("max_ram_kb")
+        if self.current_result["max_ram_kb"] != NA_VALUE:
+            normalized_max_ram_kb = normalize_max_ram_kb(
+                raw_value=self.current_result["max_ram_kb"], raw_unit=self.max_ram_raw_unit
+            )
+            self._dlog(f"normalized max RAM value: {normalized_max_ram_kb}")
+            self.current_result.set(
+                "max_ram_kb",
+                normalized_max_ram_kb,
+            )
 
 
 class MacTime(AbstractTime):
 
-    def __init__(self, command, shell, experiment=None):
+    def __init__(self, command, shell, experiment=None, extended=False, backend_name=BACKEND_BSD, debug=False):
         super().__init__(
-            command=command, time="/usr/bin/env time", shell=shell, experiment=experiment
+            command=command,
+            time="/usr/bin/env time",
+            shell=shell,
+            experiment=experiment,
+            extended=extended,
+            backend_name=backend_name,
+            debug=debug,
         )
-        if sys.platform == "darwin":
-            time_command = "/usr/bin/env time"
-        else:
+        if sys.platform != "darwin":
             raise Exception(f"Unsupported OS ({sys.platform})")
 
         self.wrapper = lambda: f'{self.time_command} -o {self.current_tmp_fn()} -l -p'
 
     def _read_mactime_dict(self):
         d = collections.OrderedDict()
-        with open(self.current_tmp_fn()) as tmp_fo:
+        tmp_fn = self.current_tmp_fn()
+        self._dlog(f"reading macOS time output from: {tmp_fn!r}")
+        with open(tmp_fn) as tmp_fo:
             for x in tmp_fo:
                 x = x.strip()
                 v, k = x.split(maxsplit=1)
@@ -293,22 +633,52 @@ class MacTime(AbstractTime):
                 else:
                     vvv = vv
                 d[kk] = vvv
+        self._dlog(f"parsed dictionary: {d!r}")
         return d
 
     def _parse_result(self):
         d = self._read_mactime_dict()
-        #print(d)
-        self.current_result.set("real_s", d["real"])
-        self.current_result.set("user_s", d["user"])
-        self.current_result.set("sys_s", d["sys"])
-        self.current_result.set("max_ram_kb", int(round(d["maximum resident set size"] / 1000)))
-        self.current_result.add("max_ram_kb_alt", int(round(d["peak memory footprint"] / 1000)))
+        for source_key, target_key in (
+            ("real", "real_s"),
+            ("user", "user_s"),
+            ("sys", "sys_s"),
+            ("block input operations", "fs_input_ops"),
+            ("block output operations", "fs_output_ops"),
+            ("page faults", "major_page_faults"),
+            ("page reclaims", "minor_page_faults"),
+            ("swaps", "swaps"),
+        ):
+            if source_key in d:
+                self.current_result.set(target_key, d[source_key])
 
-        #for k, v in zip(self.gtime_columns, gtime_output_values):
-        #    self.current_result[k] = v
+        if "maximum resident set size" in d:
+            # Empirically, the current Darwin `time -l -p` backend reports
+            # "maximum resident set size" in bytes here. tests/05_memory_units
+            # lock in the observed runtime behavior by checking that galitime's
+            # normalized max_ram_kb tracks allocated-byte deltas on the default
+            # backend. If Darwin changes the emitted unit, this conversion and
+            # that test should be updated together.
+            normalized_max_ram_kb = normalize_max_ram_kb(
+                raw_value=d["maximum resident set size"], raw_unit="bytes"
+            )
+            self._dlog(f"normalized max RAM value: {normalized_max_ram_kb}")
+            self.current_result.set(
+                "max_ram_kb",
+                normalized_max_ram_kb,
+            )
 
 
-def run_timing(log_file, command, shell, experiment, gtime, repetitions):
+def run_timing(
+    log_file,
+    command,
+    shell,
+    experiment,
+    gtime,
+    repetitions,
+    extended=False,
+    debug=False,
+    stats_file=None,
+):
     """
     Run a benchmarking command and log the results.
 
@@ -324,19 +694,61 @@ def run_timing(log_file, command, shell, experiment, gtime, repetitions):
     """
 
     platf = sys.platform
+    log_debug(debug, f"starting {PROGRAM} {__version__}")
+    log_debug(debug, f"parsed command: {command!r}")
+    log_debug(debug, f"shell: {shell!r}")
+    log_debug(debug, f"repetitions: {repetitions}")
+    log_debug(debug, f"log destination: {log_file!r}")
+    log_debug(debug, f"stats destination: {stats_file!r}")
+    log_debug(debug, f"experiment name: {experiment!r}")
+    log_debug(debug, f"platform: {platf}")
     # if gtime, run gtime everywhere & always GNU output; platform-specific behaviour
     if gtime:
-        t = GnuTime(command=command, experiment=experiment, time="/usr/bin/env gtime", shell=shell)
+        log_debug(debug, "backend: GNU time via /usr/bin/env gtime")
+        t = GnuTime(
+            command=command,
+            experiment=experiment,
+            time="/usr/bin/env gtime",
+            shell=shell,
+            extended=extended,
+            backend_name=BACKEND_GTIME,
+            debug=debug,
+        )
     else:
         if platf == "linux":
-            t = GnuTime(command=command, experiment=experiment, shell=shell)
+            log_debug(debug, "backend: GNU time via /usr/bin/env time on Linux")
+            t = GnuTime(
+                command=command,
+                experiment=experiment,
+                shell=shell,
+                extended=extended,
+                backend_name=BACKEND_GNU,
+                debug=debug,
+            )
         elif platf == "darwin":
-            t = MacTime(command=command, experiment=experiment, shell=shell)
+            log_debug(debug, "backend: macOS /usr/bin/env time -l -p on Darwin")
+            t = MacTime(
+                command=command,
+                experiment=experiment,
+                shell=shell,
+                extended=extended,
+                backend_name=BACKEND_BSD,
+                debug=debug,
+            )
         else:
             raise Exception(f"Unsupported OS ({platf})")
 
     t.run(times=repetitions)
 
+    if stats_file is not None:
+        Path(stats_file).parent.mkdir(parents=True, exist_ok=True)
+        with open(stats_file, "w") as fo:
+            print(
+                render_stats_tsv(timing=t, runs_requested=repetitions, extended=extended),
+                file=fo,
+            )
+
+    log_debug(debug, f"output destination: {log_file!r}")
     if log_file == "stdout" or log_file == "-":
         print(t)
     elif log_file == "stderr":
@@ -346,7 +758,9 @@ def run_timing(log_file, command, shell, experiment, gtime, repetitions):
         with open(log_file, "w") as fo:
             print(t, file=fo)
 
-    return t.get_final_exit_code()
+    final_exit_code = t.get_final_exit_code()
+    log_debug(debug, f"final exit code: {final_exit_code}")
+    return final_exit_code
 
 
 def main():
@@ -370,7 +784,8 @@ def main():
             msg = self.format_help()
             repl = re.compile(r'\]\s+\[')
             msg = repl.sub("] [", msg)
-            msg = msg.replace(" [-h] [-v]", "")
+            msg = re.sub(r"\s+\[-h\]", "", msg)
+            msg = re.sub(r"\s+\[-v\]", "", msg)
             msg = msg.replace(", --help", "        ")
             print(msg)
 
@@ -393,14 +808,36 @@ def main():
         formatter_class=argparse.RawTextHelpFormatter,
         description="Program: {} ({})\n".format(PROGRAM, DESC) +
         "Version: {}\n".format(__version__) + "Contact: Karel Brinda <karel.brinda@inria.fr>",
+        usage="galitime [-d] [-r INT] [-g] [-E] [-l FILE] [-S FILE] [-n STR] [-s STR] [--] command [arg ...]",
+        epilog=(
+            "\n"
+            "command modes:\n"
+            "  argv-like mode:      galitime sleep 0.1\n"
+            "  shell-command mode:  galitime \"echo a && echo b\"\n"
+            "\n"
+            "notes:\n"
+            "  - use quotes when your command includes shell syntax such as: redirection ('>'),\n"
+            "    pipelines ('|'), '&&', ';', globbing, or command substitution\n"
+            "  - use -- to explicitely mark the start of the benchmarked command when needed\n"
+            "  - argv-like mode is only guaranteed for POSIX-like shells"
+        ),
     )
 
-    parser.add_argument('command', help='the command to be benchmarked')
+    parser.add_argument(
+        'command',
+        nargs='*',
+        help='the command to be benchmarked',
+    )
 
     parser.add_argument(
         '-v',
         action='version',
         version='{} {}'.format(PROGRAM, __version__),
+    )
+
+    parser.add_argument(
+        '-d', '--debug', dest='debug', action='store_true',
+        help='print detailed debug trace to stderr'
     )
 
     parser.add_argument(
@@ -414,8 +851,18 @@ def main():
     )
 
     parser.add_argument(
+        '-E', '--extended', action='store_true',
+        help='print extended output schema'
+    )
+
+    parser.add_argument(
         '-l', '--log', dest='log', metavar='FILE', default=DEFAULT_l,
         help=f'output (filename/stderr/stdout) [{DEFAULT_l}]'
+    )
+
+    parser.add_argument(
+        '-S', '--stats', dest='stats', metavar='FILE', default=None,
+        help='write summary statistics TSV to FILE [disabled]'
     )
 
     parser.add_argument(
@@ -428,11 +875,33 @@ def main():
         default=DEFAULT_s, dest='shell'
     )
 
-    args = parser.parse_args()
+    option_argv, command_argv, fallback_to_argparse = split_cli_argv(parser, sys.argv[1:])
+    if fallback_to_argparse:
+        args = parser.parse_args(sys.argv[1:])
+        command_argv = args.command
+    else:
+        args = parser.parse_args(option_argv)
+    if args.stats in {"stdout", "stderr", "-"}:
+        parser.error("--stats requires a real file path")
+    if not command_argv:
+        parser.error("the following arguments are required: command")
+    # The logged "command" field intentionally matches the exact string we execute:
+    # a single token is preserved verbatim, otherwise the argv tail is rebuilt with shlex.join.
+    if len(command_argv) == 1:
+        command = command_argv[0]
+    else:
+        command = shlex.join(command_argv)
 
     r = run_timing(
-        log_file=args.log, experiment=args.experiment, command=args.command, gtime=args.gtime,
-        shell=args.shell, repetitions=args.reps
+        log_file=args.log,
+        stats_file=args.stats,
+        experiment=args.experiment,
+        command=command,
+        gtime=args.gtime,
+        shell=args.shell,
+        repetitions=args.reps,
+        extended=args.extended,
+        debug=args.debug,
     )
 
     return r

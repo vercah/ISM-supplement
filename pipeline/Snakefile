@@ -130,7 +130,7 @@ rule generate_distances_from_dump:
         ../bin/galitime \\
             -l "{output.time}" \\
             -n "{params.experiment}" \\
-            "./_build_dists_parallel.py 05_dumps {wildcards.dataset} {wildcards.k} 07_ham_dists {threads}"
+            "./_build_dists 05_dumps {wildcards.dataset} {wildcards.k} 07_ham_dists {threads}"
         xz -9 07_ham_dists/{wildcards.dataset}_k{wildcards.k}_unitig.dists.txt
         xz -9 07_ham_dists/{wildcards.dataset}_k{wildcards.k}_kmer.dists.txt
         xz -9 07_ham_dists/{wildcards.dataset}_k{wildcards.k}_uniqrow.dists.txt

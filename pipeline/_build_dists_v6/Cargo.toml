@@ -1,0 +1,16 @@
+[package]
+name = "build_dists_v6"
+version = "0.1.0"
+edition = "2021"
+
+[profile.release]
+codegen-units = 1
+lto = "fat"
+panic = "abort"
+strip = "symbols"
+
+[dependencies]
+anyhow = "1.0"
+clap = { version = "4.5", features = ["derive"] }
+itoa = "1.0"
+rayon = "1.10"

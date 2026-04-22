@@ -1,8 +1,4 @@
-#! /usr/bin/env bash
-
-set -e
-set -o pipefail
-set -u
+#!/usr/bin/env bash
 
 # Defaults correspond to:
 #   ./_build_dists_v1.py 05_dumps gisp 31 07_ham_dists 10
@@ -28,15 +24,13 @@ run_one() {
     local version="$1"
     local cmd="$2"
     local outdir="${OUT_BASE}/v${version}"
-    local timefile="timing_logs/v${version}.time"
-    local logfile="timing_logs/v${version}.stdout.log"
 
     mkdir -p "$outdir"
 
     ../bin/galitime \
         -l stdout \
         -n "build_dists_v${version}_${DATASET}_k${K}" \
-        "$cmd" \
+        "$cmd"
 }
 
 (

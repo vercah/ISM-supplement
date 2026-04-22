@@ -37,7 +37,7 @@ trap 'rm -rf "$tmpdir"' EXIT
     "$repo_root/bin/galitime" \
         -l stderr \
         -n build_dists_minigono_k31 \
-        "./_build_dists_parallel.py \
+        "./_build_dists \
             05_dumps \
             minigono \
             31 \

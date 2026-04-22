@@ -298,12 +298,12 @@ rule get_tree_order:
 
 rule get_randomized_order:
     input:
-        order="10_orders/{dataset}_upgma_k{k}_N{N}_{type}.txt",
+        selection="03_selection/{dataset}.N{N}.txt",
     output:
         rand="10_orders/{dataset}_randomized_k{k}_N{N}_{type}.txt",
     shell:
         """
-        cat {input.order} | sort -R > {output.rand}
+        cat {input.selection} | sort -R > {output.rand}
     """
 
 

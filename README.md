@@ -136,17 +136,58 @@ Any dataset `.txt` file present in `01_datasets/` will be picked up automaticall
 
 ### Step 2: Configure pipeline parameters
 
-The pipeline parameters are defined at the top of `pipeline/Snakefile`:
+Edit the single workflow config file `pipeline/config.yaml`. This is the only intended user-facing pipeline config file.
 
-- **`k_values`** — list of k-mer sizes (default: `[31]`)
-- **`matrix_types`** — types of presence/absence matrices (default: `["kmer", "unitig"]`)
-- **`N_values`** — number of genomes to evaluate; by default derived from the number of lines in each dataset file
+```yaml
+k_values:
+  - 31
 
-The pipeline generates results for the Cartesian product of all parameter combinations across all auto-detected dataset files in `01_datasets/`. For example, if `01_datasets/` contains `minigono.txt` and `my_dataset.txt`, both datasets will be processed automatically.
+matrices:
+  kmer: true
+  unitig: true
+  uniqrow: true
+
+outputs:
+  best_tsp: true
+  worst_tsp: true
+  nj_attotree: true
+  upgma_attotree: true
+  randomized: true
+
+attotree_k: 31
+attotree_s: 10000
+```
+
+Configuration keys:
+
+- **`k_values`** — list of k-mer sizes to evaluate
+- **`matrices`** — enable or disable the `kmer`, `unitig`, and `uniqrow` matrix families
+- **`outputs`** — enable or disable the final ordering families:
+  `best_tsp`, `worst_tsp`, `nj_attotree`, `upgma_attotree`, `randomized`
+- **`attotree_k`** — attotree k-mer size passed as `attotree -k`
+- **`attotree_s`** — attotree sketch size passed as `attotree -s`
+
+Two common edits:
+
+Disable worst-case TSP outputs:
+
+```yaml
+outputs:
+  worst_tsp: false
+```
+
+Disable the unitig matrix family:
+
+```yaml
+matrices:
+  unitig: false
+```
+
+The pipeline generates results for the Cartesian product of the enabled settings across all auto-detected dataset files in `01_datasets/`. `N_values` are still derived automatically from the number of lines in each dataset file; they are not configured in `config.yaml`.
 
 ### Step 3: Run the pipeline
 
-Run the pipeline through `make`:
+After editing `pipeline/config.yaml`, run the pipeline through `make` from `pipeline/`:
 
 ```bash
 cd pipeline

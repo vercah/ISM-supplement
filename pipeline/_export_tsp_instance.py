@@ -2,14 +2,7 @@
 #
 
 import argparse
-import collections
-import os
-import re
-import sys
-
-from pathlib import Path
 from xopen import xopen
-from pprint import pprint
 
 import numpy as np
 import pandas as pd
@@ -104,34 +97,37 @@ def create_matrix_from_file(fn, sel, worst):
 
 
 def process(fn, out_optimal, out_worst, sel):
-    keys, arr = create_matrix_from_file(fn, sel, False)
-    with open(f"{out_optimal}", "w") as fo:
-        write_tsp_instance(arr, keys, fo)
+    if out_optimal:
+        keys, arr = create_matrix_from_file(fn, sel, False)
+        with open(out_optimal, "w") as fo:
+            write_tsp_instance(arr, keys, fo)
 
-    keys, worst_arr = create_matrix_from_file(fn, sel, True)
-    with open(f"{out_worst}", "w") as fo:
-        write_tsp_instance(worst_arr, keys, fo)
+    if out_worst:
+        keys, worst_arr = create_matrix_from_file(fn, sel, True)
+        with open(out_worst, "w") as fo:
+            write_tsp_instance(worst_arr, keys, fo)
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="generate optimal and worst case TSP instances")
+        description="generate optimal and/or worst-case TSP instances"
+    )
     parser.add_argument("fn", metavar="input.txt", help="distance file")
     parser.add_argument("sel", help="selection file")
     parser.add_argument(
         "-o",
         "--out-optimal",
-        required=True,
-        help="filename.tsp for optimal",
+        help="write the optimal-case instance to this .tsp file",
     )
     parser.add_argument(
         "-w",
         "--out-worst",
-        required=True,
-        help="filename.tsp for worst",
+        help="write the worst-case instance to this .tsp file",
     )
 
     args = parser.parse_args()
+    if not args.out_optimal and not args.out_worst:
+        parser.error("at least one of --out-optimal or --out-worst is required")
     process(args.fn, args.out_optimal, args.out_worst, args.sel)
 
 

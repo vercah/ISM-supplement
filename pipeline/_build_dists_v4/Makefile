@@ -5,8 +5,11 @@ CXX = g++
 endif
 
 ifeq ($(origin CXXFLAGS), undefined)
-CXXFLAGS = -O3 -DNDEBUG -std=c++17 -march=native
+CXXFLAGS = -O3 -DNDEBUG -std=c++17 -march=native -flto
 endif
+
+LDFLAGS ?=
+LDFLAGS += -flto
 
 OMP_CXXFLAGS ?= -fopenmp
 OMP_CPPFLAGS ?=
@@ -26,7 +29,7 @@ endif
 all: _build_dists_v4
 
 _build_dists_v4: main.cpp
-	$(CXX) $(CXXFLAGS) $(OMP_CXXFLAGS) $(OMP_CPPFLAGS) $< -o $@ $(OMP_LDFLAGS)
+	$(CXX) $(CXXFLAGS) $(OMP_CXXFLAGS) $(OMP_CPPFLAGS) $< -o $@ $(LDFLAGS) $(OMP_LDFLAGS)
 
 clean:
 	rm -f _build_dists_v4

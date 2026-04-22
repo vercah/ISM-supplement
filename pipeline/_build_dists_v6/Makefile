@@ -3,7 +3,7 @@
 all: _build_dists_v6
 
 _build_dists_v6:
-	cargo build --release
+	RUSTFLAGS="-C target-cpu=native" cargo build --release
 	ln -sf target/release/build_dists_v6 _build_dists_v6
 
 clean:

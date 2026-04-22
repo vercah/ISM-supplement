@@ -90,7 +90,7 @@ rule all:
             for g in g_values
             for k in k_values
             for n in N_values[g]
-            for order in ["upgma", "optimal", "randomized", "nj", "worst"]
+            for order in enabled_methods
             for matrix in matrix_types
         ],
 

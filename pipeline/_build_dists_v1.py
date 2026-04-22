@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# Original distance-building implementation by @vercah.
+# Preserved here as the baseline (legacy) version.
+
 import os, sys, argparse
 import numpy as np
 from joblib import Parallel, delayed

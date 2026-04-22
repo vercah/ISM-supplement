@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# ChatGPT rewrite of the original distance-building script.
+# This is the first rewrite (v2).
+
 import argparse
 from pathlib import Path
 

@@ -60,6 +60,9 @@ output_flags = resolve_enabled_flags(
 
 k_values = config.get("k_values", [31])  # 15, 18, 23, 31
 matrix_types = [matrix for matrix in KNOWN_MATRIX_TYPES if matrix_flags[matrix]]
+disabled_matrix_types = [
+    matrix for matrix in KNOWN_MATRIX_TYPES if not matrix_flags[matrix]
+]
 enabled_methods = [
     internal_name
     for config_name, internal_name in KNOWN_OUTPUTS.items()
@@ -175,12 +178,15 @@ rule generate_distances_from_dump:
         meta="05_dumps/{dataset}_k{k}.metadata.txt",
         unitigs="05_dumps/{dataset}_k{k}.unitigs.fa",
     output:
-        unitig="07_ham_dists/{dataset}_k{k}_unitig.dists.txt.xz",
-        kmer="07_ham_dists/{dataset}_k{k}_kmer.dists.txt.xz",
-        unique_row="07_ham_dists/{dataset}_k{k}_uniqrow.dists.txt.xz",
+        dists=expand(
+            "07_ham_dists/{{dataset}}_k{{k}}_{type}.dists.txt.xz",
+            type=matrix_types,
+        ),
         time="07_ham_dists/{dataset}_k{k}.build_dists.time",
     threads: 10
     params:
+        enabled_matrix_types=" ".join(matrix_types),
+        disabled_matrix_types=" ".join(disabled_matrix_types),
         experiment=lambda wc: f"build_dists_{wc.dataset}_k{wc.k}",
     shell:
         """
@@ -188,9 +194,16 @@ rule generate_distances_from_dump:
             -l "{output.time}" \\
             -n "{params.experiment}" \\
             "./_build_dists 05_dumps {wildcards.dataset} {wildcards.k} 07_ham_dists {threads}"
-        xz -9 07_ham_dists/{wildcards.dataset}_k{wildcards.k}_unitig.dists.txt
-        xz -9 07_ham_dists/{wildcards.dataset}_k{wildcards.k}_kmer.dists.txt
-        xz -9 07_ham_dists/{wildcards.dataset}_k{wildcards.k}_uniqrow.dists.txt
+        for matrix in {params.enabled_matrix_types}; do
+            xz -9 "07_ham_dists/{wildcards.dataset}_k{wildcards.k}_${{matrix}}.dists.txt"
+        done
+        if [ -n "{params.disabled_matrix_types}" ]; then
+            for matrix in {params.disabled_matrix_types}; do
+                rm -f \\
+                    "07_ham_dists/{wildcards.dataset}_k{wildcards.k}_${{matrix}}.dists.txt" \\
+                    "07_ham_dists/{wildcards.dataset}_k{wildcards.k}_${{matrix}}.dists.txt.xz"
+            done
+        fi
 
         """
 

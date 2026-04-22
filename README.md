@@ -142,6 +142,8 @@ Edit the single workflow config file `pipeline/config.yaml`. This is the only in
 k_values:
   - 31
 
+random_seed: 1
+
 matrices:
   kmer: true
   unitig: true
@@ -161,6 +163,7 @@ attotree_s: 10000
 Configuration keys:
 
 - **`k_values`** — list of k-mer sizes to evaluate
+- **`random_seed`** — base seed controlling reproducible dataset shuffling and randomized output ordering
 - **`matrices`** — enable or disable the `kmer`, `unitig`, and `uniqrow` matrix families
 - **`outputs`** — enable or disable the final ordering families:
   `best_tsp`, `worst_tsp`, `nj_attotree`, `upgma_attotree`, `randomized`
@@ -244,3 +247,8 @@ Large phylogenetic trees cause deep recursion in ete3's traversal routines. The 
 #### File descriptor limit
 
 Fulgor may open many files simultaneously during index construction. The pipeline raises the soft file-descriptor limit to 4,096 before calling `fulgor build` (`Snakefile`).
+
+
+### Randomized ordering
+
+The pipeline now uses deterministic seed-based shuffling in `_shuffle_lines_with_seed.py` rather than `sort -R`. A single `random_seed` config value controls both dataset shuffling and randomized output ordering.

@@ -205,17 +205,19 @@ rule export_tsp_instance:
         selection="03_selection/{dataset}.N{N}.txt",
         dists="07_ham_dists/{dataset}_k{k}_{type}.dists.txt.xz",
     output:
-        worst="08_tsp/{dataset}_worst_k{k}_N{N}_{type}/instance.tsp",
-        optimal="08_tsp/{dataset}_optimal_k{k}_N{N}_{type}/instance.tsp",
-        time="08_tsp/{dataset}_k{k}_N{N}_{type}.export_tsp.time",
+        tsp="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/instance.tsp",
+        time="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}.export_tsp.time",
+    wildcard_constraints:
+        variant=r"(optimal|worst)",
     params:
-        experiment=lambda wc: f"tsp_export_{wc.dataset}_k{wc.k}_N{wc.N}_{wc.type}",
+        experiment=lambda wc: f"tsp_export_{wc.variant}_{wc.dataset}_k{wc.k}_N{wc.N}_{wc.type}",
+        output_flag=lambda wc: "-o" if wc.variant == "optimal" else "-w",
     shell:
         """
         ../bin/galitime \\
             -l "{output.time}" \\
             -n "{params.experiment}" \\
-            "./_export_tsp_instance.py {input.dists} {input.selection} -o {output.optimal} -w {output.worst}"
+            "./_export_tsp_instance.py {input.dists} {input.selection} {params.output_flag} {output.tsp}"
     """
 
 

@@ -16,7 +16,7 @@ matrices:
 
 outputs:
   best_tsp: true
-  worst_tsp: true
+  worst_tsp: false
   nj_attotree: true
   upgma_attotree: true
   randomized: true

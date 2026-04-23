@@ -53,6 +53,38 @@ def parse_config_int(name, default):
     return value
 
 
+def parse_config_nonneg_int(name, default):
+    value = config.get(name, default)
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError(
+            f"Config key '{name}' must be a non-negative integer, not {value!r}."
+        )
+    return value
+
+
+def compute_sample_sizes(N, conf):
+    if N < 1:
+        raise ValueError(f"Dataset size must be >= 1, got {N}")
+
+    if conf == 0:
+        return [N]
+
+    values = {1, N}
+    step = 1.0 / conf
+    e = 0
+
+    while True:
+        raw = 10 ** (e * step)
+        n = int(round(raw))
+        n = max(1, min(N, n))
+        values.add(n)
+        if n >= N:
+            break
+        e += 1
+
+    return sorted(values)
+
+
 default_matrix_flags = {matrix: True for matrix in KNOWN_MATRIX_TYPES}
 default_output_flags = {output: True for output in KNOWN_OUTPUTS}
 
@@ -69,6 +101,7 @@ output_flags = resolve_enabled_flags(
 
 k_values = config.get("k_values", [31])  # 15, 18, 23, 31
 random_seed = parse_config_int("random_seed", 1)
+sampling_conf = parse_config_nonneg_int("sampling_conf", 0)
 matrix_types = [matrix for matrix in KNOWN_MATRIX_TYPES if matrix_flags[matrix]]
 disabled_matrix_types = [
     matrix for matrix in KNOWN_MATRIX_TYPES if not matrix_flags[matrix]
@@ -89,7 +122,9 @@ if not g_values:
     )
 dataset_sizes = {g: sum(1 for _ in open(f"01_datasets/{g}.txt")) for g in g_values}
 
-N_values = {g: [dataset_sizes[g]] for g in g_values}
+N_values = {g: compute_sample_sizes(dataset_sizes[g], sampling_conf) for g in g_values}
+
+NON_SINGLETON_N = r"(?:[2-9]|[1-9][0-9]+)"
 
 wildcard_constraints:
     N=r"\d+",
@@ -236,6 +271,7 @@ rule export_tsp_instance:
         tsp="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/instance.tsp",
         time="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}.export_tsp.time",
     wildcard_constraints:
+        N=NON_SINGLETON_N,
         variant=r"(optimal|worst)",
     params:
         experiment=lambda wc: f"tsp_export_{wc.variant}_{wc.dataset}_k{wc.k}_N{wc.N}_{wc.type}",
@@ -256,6 +292,8 @@ rule run_concorde:
         sol="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/instance.sol",
         log="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/log.txt",
         time="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}.instance.sol.time",
+    wildcard_constraints:
+        N=NON_SINGLETON_N,
     params:
         concorde=CONCORDE_BIN,
         experiment=lambda wc: f"concorde_{wc.variant}_N{wc.N}_{wc.type}",
@@ -287,6 +325,7 @@ rule run_attotree:
         nw="09_trees/{dataset}_{method}_N{N}.nw",
         time="09_trees/{dataset}_{method}_N{N}.nw.time",
     wildcard_constraints:
+        N=NON_SINGLETON_N,
         method=r"(nj|upgma)",
     threads: 8
     params:
@@ -321,6 +360,7 @@ rule get_tree_order:
         order="10_orders/{dataset}_{method}_k{k}_N{N}_{type}.txt",
         time="10_orders/{dataset}_{method}_k{k}_N{N}_{type}.txt.time",
     wildcard_constraints:
+        N=NON_SINGLETON_N,
         method=r"(nj|upgma)",
     params:
         experiment=lambda wc: f"tree_order_{wc.dataset}_{wc.method}_k{wc.k}_N{wc.N}_{wc.type}",
@@ -338,6 +378,8 @@ rule get_randomized_order:
         selection="03_selection/{dataset}.N{N}.txt",
     output:
         rand="10_orders/{dataset}_randomized_k{k}_N{N}_{type}.txt",
+    wildcard_constraints:
+        N=NON_SINGLETON_N,
     params:
         seed=random_seed,
     shell:
@@ -357,6 +399,7 @@ rule extract_tsp_order:
         order="10_orders/{dataset}_{variant}_k{k}_N{N}_{type}.txt",
         time="10_orders/{dataset}_{variant}_k{k}_N{N}_{type}.txt.time",
     wildcard_constraints:
+        N=NON_SINGLETON_N,
         variant=r"(optimal|worst)",
     params:
         experiment=lambda wc: f"tsp_order_{wc.dataset}_{wc.variant}_k{wc.k}_N{wc.N}_{wc.type}",
@@ -370,6 +413,17 @@ rule extract_tsp_order:
                 {input.sol} \\
                 > {output.order}"
     """
+
+
+rule get_singleton_order:
+    input:
+        selection="03_selection/{dataset}.N1.txt",
+    output:
+        order="10_orders/{dataset}_{method}_k{k}_N1_{type}.txt",
+    wildcard_constraints:
+        method=r"(optimal|worst|nj|upgma|randomized)",
+    shell:
+        "cp {input.selection} {output.order}"
 
 
 # --------------------------------------

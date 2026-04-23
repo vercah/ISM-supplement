@@ -144,6 +144,8 @@ k_values:
 
 random_seed: 1
 
+sampling_conf: 0
+
 matrices:
   kmer: true
   unitig: true
@@ -164,11 +166,22 @@ Configuration keys:
 
 - **`k_values`** — list of k-mer sizes to evaluate
 - **`random_seed`** — base seed controlling reproducible dataset shuffling and randomized output ordering
+- **`sampling_conf`** — geometric subsampling density for automatically derived `N` values
 - **`matrices`** — enable or disable the `kmer`, `unitig`, and `uniqrow` matrix families
 - **`outputs`** — enable or disable the final ordering families:
   `best_tsp`, `worst_tsp`, `nj_attotree`, `upgma_attotree`, `randomized`
 - **`attotree_k`** — attotree k-mer size passed as `attotree -k`
 - **`attotree_s`** — attotree sketch size passed as `attotree -s`
+
+`sampling_conf` controls which subset sizes are evaluated for each dataset:
+
+- `0` preserves the previous behavior and evaluates only the full dataset size.
+- `1` evaluates one logarithmic sample per decade: `1, 10, 100, ...`, plus the full dataset size.
+- `2` evaluates two logarithmic samples per decade: `1, round(sqrt(10)), 10, round(sqrt(10) * 10), 100, ...`, plus the full dataset size.
+
+More generally, a positive value `c` means `c` logarithmic steps per order of magnitude. Candidate values are computed with standard Python `round(...)`, clamped to the dataset size, deduplicated after rounding, and returned in ascending order. The final full dataset size is always included. For example, dataset size `7` gives `[7]` when `sampling_conf: 0` and `[1, 7]` when `sampling_conf: 1`; dataset size `100` gives `[1, 10, 100]` when `sampling_conf: 1` and `[1, 3, 10, 32, 100]` when `sampling_conf: 2`.
+
+Selections remain nested: `02_order_randomization/{dataset}.txt` is the reproducibly shuffled master list, and `03_selection/{dataset}.N{N}.txt` is the first `N` entries from that list, sorted for easier debugging. Therefore larger `N` selections still contain the smaller selected set. When `N = 1`, the pipeline writes the single selected genome directly as the order file in `10_orders/` for each enabled ordering family, skips Concorde and attotree, and still runs the normal final evaluation so `11_runs/..._N1_...runs` is produced.
 
 Two common edits:
 
@@ -186,7 +199,7 @@ matrices:
   unitig: false
 ```
 
-The pipeline generates results for the Cartesian product of the enabled settings across all auto-detected dataset files in `01_datasets/`. `N_values` are still derived automatically from the number of lines in each dataset file; they are not configured in `config.yaml`.
+The pipeline generates results for the Cartesian product of the enabled settings across all auto-detected dataset files in `01_datasets/`. `N_values` are derived automatically from the number of lines in each dataset file and the `sampling_conf` setting.
 
 ### Step 3: Run the pipeline
 

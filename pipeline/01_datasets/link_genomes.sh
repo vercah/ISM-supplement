@@ -25,7 +25,10 @@ is_fasta_path() {
 }
 
 collect_from_dir() {
-    find "$1" -type f \( -name '*.fa' -o -name '*.fasta' -o -name '*.fna' -o -name '*.fa.gz' -o -name '*.fasta.gz' -o -name '*.fna.gz' \) | sort
+    local root
+    root="$(cd "$1" && pwd)"
+
+    find "$root" -type f \( -name '*.fa' -o -name '*.fasta' -o -name '*.fna' -o -name '*.fa.gz' -o -name '*.fasta.gz' -o -name '*.fna.gz' \) | sort
 }
 
 derive_dataset_name() {

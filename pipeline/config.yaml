@@ -3,6 +3,12 @@ k_values:
 
 random_seed: 1
 
+# Geometric subsampling density.
+# 0 keeps the current behavior and uses only the full dataset size.
+# c > 0 uses c rounded logarithmic steps per order of magnitude, always
+# including 1 and the full dataset size, with duplicates removed after rounding.
+sampling_conf: 0
+
 matrices:
   kmer: true
   unitig: true

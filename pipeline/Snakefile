@@ -4,6 +4,11 @@ import os
 configfile: "config.yaml"
 
 REPO_ROOT = os.path.abspath(os.path.join(workflow.basedir, ".."))
+AGGREGATE_SCRIPT = (
+    "pipeline/_aggregate_final_runs.py"
+    if os.path.exists("pipeline/_aggregate_final_runs.py")
+    else os.path.join(workflow.basedir, "_aggregate_final_runs.py")
+)
 CONCORDE_BIN = os.path.abspath(
     os.path.join(REPO_ROOT, "bin", "concorde")
 )
@@ -123,6 +128,15 @@ if not g_values:
 dataset_sizes = {g: sum(1 for _ in open(f"01_datasets/{g}.txt")) for g in g_values}
 
 N_values = {g: compute_sample_sizes(dataset_sizes[g], sampling_conf) for g in g_values}
+run_outputs = [
+    f"11_runs/{g}_{order}_k{k}_N{n}_{matrix}.runs"
+    for g in g_values
+    for k in k_values
+    for n in N_values[g]
+    for order in enabled_methods
+    for matrix in matrix_types
+]
+final_tsv = "12_final/final_data.tsv"
 
 NON_SINGLETON_N = r"(?:[2-9]|[1-9][0-9]+)"
 
@@ -133,14 +147,8 @@ wildcard_constraints:
 
 rule all:
     input:
-        [
-            f"11_runs/{g}_{order}_k{k}_N{n}_{matrix}.runs"
-            for g in g_values
-            for k in k_values
-            for n in N_values[g]
-            for order in enabled_methods
-            for matrix in matrix_types
-        ],
+        run_outputs,
+        final_tsv,
 
 
 rule randomization:
@@ -467,3 +475,17 @@ rule compute_final_runs:
                 ) \\
                 --out {output.run}"
     """
+
+
+rule aggregate_final_tsv:
+    input:
+        run_outputs,
+    output:
+        final_tsv,
+    params:
+        script=AGGREGATE_SCRIPT,
+    shell:
+        """
+        mkdir -p 12_final
+        python3 {params.script} {input} > {output}
+        """

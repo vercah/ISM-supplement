@@ -3,10 +3,7 @@ import os
 
 configfile: "config.yaml"
 
-REPO_ROOT = os.path.abspath(os.path.join(workflow.basedir, ".."))
-CONCORDE_BIN = os.path.abspath(
-    os.path.join(REPO_ROOT, "bin", "concorde")
-)
+CONCORDE_BIN = os.path.abspath("../bin/concorde")
 if not os.path.exists(CONCORDE_BIN):
     raise FileNotFoundError(f"Concorde binary not found at {CONCORDE_BIN}")
 
@@ -62,25 +59,25 @@ def parse_config_nonneg_int(name, default):
     return value
 
 
-def compute_sample_sizes(N, conf):
-    if N < 1:
-        raise ValueError(f"Dataset size must be >= 1, got {N}")
+def compute_sample_sizes(total_genomes, sampling_conf):
+    if total_genomes < 1:
+        raise ValueError(f"Dataset size must be >= 1, got {total_genomes}")
 
-    if conf == 0:
-        return [N]
+    if sampling_conf == 0:
+        return [total_genomes]
 
-    values = {1, N}
-    step = 1.0 / conf
-    e = 0
+    values = {1, total_genomes}
+    step = 1.0 / sampling_conf
+    exponent = 0
 
     while True:
-        raw = 10 ** (e * step)
-        n = int(round(raw))
-        n = max(1, min(N, n))
-        values.add(n)
-        if n >= N:
+        raw = 10 ** (exponent * step)
+        n_genomes = int(round(raw))
+        n_genomes = max(1, min(total_genomes, n_genomes))
+        values.add(n_genomes)
+        if n_genomes >= total_genomes:
             break
-        e += 1
+        exponent += 1
 
     return sorted(values)
 
@@ -99,7 +96,7 @@ output_flags = resolve_enabled_flags(
     default_output_flags,
 )
 
-k_values = config.get("k_values", [31])  # 15, 18, 23, 31
+kmer_sizes = config.get("kmer_sizes", [31])
 random_seed = parse_config_int("random_seed", 1)
 sampling_conf = parse_config_nonneg_int("sampling_conf", 0)
 matrix_types = [matrix for matrix in KNOWN_MATRIX_TYPES if matrix_flags[matrix]]
@@ -115,14 +112,29 @@ attotree_k = config.get("attotree_k", 31)
 attotree_s = config.get("attotree_s", 10000)
 
 dataset_files = sorted(glob.glob(os.path.join("01_datasets", "*.txt")))
-g_values = [os.path.splitext(os.path.basename(path))[0] for path in dataset_files]
-if not g_values:
+datasets = [os.path.splitext(os.path.basename(path))[0] for path in dataset_files]
+if not datasets:
     raise FileNotFoundError(
         "No dataset files found in 01_datasets. Add one or more '*.txt' files first."
     )
-dataset_sizes = {g: sum(1 for _ in open(f"01_datasets/{g}.txt")) for g in g_values}
+total_genomes_by_dataset = {
+    dataset: sum(1 for _ in open(f"01_datasets/{dataset}.txt"))
+    for dataset in datasets
+}
 
-N_values = {g: compute_sample_sizes(dataset_sizes[g], sampling_conf) for g in g_values}
+n_genomes_by_dataset = {
+    dataset: compute_sample_sizes(total_genomes_by_dataset[dataset], sampling_conf)
+    for dataset in datasets
+}
+run_outputs = [
+    f"11_runs/{dataset}_{order}_k{k}_N{n}_{matrix}.runs"
+    for dataset in datasets
+    for k in kmer_sizes
+    for n in n_genomes_by_dataset[dataset]
+    for order in enabled_methods
+    for matrix in matrix_types
+]
+FINAL_TSV = "final_data.tsv"
 
 NON_SINGLETON_N = r"(?:[2-9]|[1-9][0-9]+)"
 
@@ -133,14 +145,8 @@ wildcard_constraints:
 
 rule all:
     input:
-        [
-            f"11_runs/{g}_{order}_k{k}_N{n}_{matrix}.runs"
-            for g in g_values
-            for k in k_values
-            for n in N_values[g]
-            for order in enabled_methods
-            for matrix in matrix_types
-        ],
+        run_outputs,
+        FINAL_TSV,
 
 
 rule randomization:
@@ -152,9 +158,9 @@ rule randomization:
         seed=random_seed,
     shell:
         """
-        ./_shuffle_lines_with_seed.py \
-            --seed {params.seed} \
-            {input.txt} \
+        ./_shuffle_lines_with_seed.py \\
+            --seed {params.seed} \\
+            {input.txt} \\
             {output.txt}
     """
 
@@ -166,7 +172,7 @@ rule create_selection:
         txt="03_selection/{dataset}.N{N}.txt",
     shell:
         """
-       head -n {wildcards.N} {input.txt} | sort > {output.txt}
+        head -n {wildcards.N} {input.txt} | sort > {output.txt}
     """
 
 
@@ -377,17 +383,17 @@ rule get_randomized_order:
     input:
         selection="03_selection/{dataset}.N{N}.txt",
     output:
-        rand="10_orders/{dataset}_randomized_k{k}_N{N}_{type}.txt",
+        order="10_orders/{dataset}_randomized_k{k}_N{N}_{type}.txt",
     wildcard_constraints:
         N=NON_SINGLETON_N,
     params:
         seed=random_seed,
     shell:
         """
-        ./_shuffle_lines_with_seed.py \
-            --seed {params.seed} \
-            {input.selection} \
-            {output.rand}
+        ./_shuffle_lines_with_seed.py \\
+            --seed {params.seed} \\
+            {input.selection} \\
+            {output.order}
     """
 
 
@@ -439,7 +445,7 @@ rule compute_final_runs:
     params:
         experiment=lambda wc: f"final_runs_{wc.dataset}_{wc.method}_k{wc.k}_N{wc.N}_{wc.type}",
     shell:
-        """
+        r"""
         # validation
         n_lines=$(wc -l < {input.order})
         n_unique=$(sort {input.order} | uniq | wc -l)
@@ -450,7 +456,7 @@ rule compute_final_runs:
             echo "ERROR: {input.order} has $n_lines lines, expected {wildcards.N}" >&2; exit 1
         fi
 
-         ../bin/galitime \\
+        ../bin/galitime \\
             -l "{output.time}" \\
             -n "{params.experiment}" \\
             "./_evaluate_order_nb_runs.py \\
@@ -467,3 +473,14 @@ rule compute_final_runs:
                 ) \\
                 --out {output.run}"
     """
+
+
+rule aggregate_final_tsv:
+    input:
+        run_outputs,
+    output:
+        FINAL_TSV,
+    shell:
+        """
+        ./_aggregate_final_runs.py {input} > {output}
+        """

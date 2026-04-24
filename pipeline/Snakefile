@@ -134,7 +134,7 @@ run_outputs = [
     for order in enabled_methods
     for matrix in matrix_types
 ]
-FINAL_TSV = "11_final_data.tsv"
+FINAL_TSV = "final_data.tsv"
 
 NON_SINGLETON_N = r"(?:[2-9]|[1-9][0-9]+)"
 
@@ -445,7 +445,7 @@ rule compute_final_runs:
     params:
         experiment=lambda wc: f"final_runs_{wc.dataset}_{wc.method}_k{wc.k}_N{wc.N}_{wc.type}",
     shell:
-        r"""
+        """
         # validation
         n_lines=$(wc -l < {input.order})
         n_unique=$(sort {input.order} | uniq | wc -l)
@@ -462,7 +462,7 @@ rule compute_final_runs:
             "./_evaluate_order_nb_runs.py \\
                 {input.dists} \\
                 {input.order} \\
-                --num-rows \$( \\
+                --num-rows \\$( \\
                     if [ '{wildcards.type}' = 'unitig' ]; then \\
                         grep '^num_unitigs=' 05_dumps/{wildcards.dataset}_k{wildcards.k}.metadata.txt | cut -d= -f2; \\
                     elif [ '{wildcards.type}' = 'kmer' ]; then \\

@@ -134,7 +134,9 @@ run_outputs = [
     for order in enabled_methods
     for matrix in matrix_types
 ]
+
 FINAL_TSV = "final_data.tsv"
+FINAL_TIME_TSV = "final_time.tsv"
 
 NON_SINGLETON_N = r"(?:[2-9]|[1-9][0-9]+)"
 
@@ -147,6 +149,7 @@ rule s00_all:
     input:
         run_outputs,
         FINAL_TSV,
+        FINAL_TIME_TSV,
 
 
 rule s02_randomization:
@@ -499,3 +502,15 @@ rule s11_aggregate_final_tsv:
         """
         ./_aggregate_final_runs.py {input} > {output}
         """
+
+
+rule s11_aggregate_final_time_tsv:
+    input:
+        run_outputs,
+    output:
+        FINAL_TIME_TSV,
+    shell:
+        """
+        awk '!a[$0]++' */*.time > {output}
+        """
+

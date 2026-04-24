@@ -139,7 +139,7 @@ Any dataset `.txt` file present in `01_datasets/` will be picked up automaticall
 Edit the single workflow config file `pipeline/config.yaml`. This is the only intended user-facing pipeline config file.
 
 ```yaml
-k_values:
+kmer_sizes:
   - 31
 
 random_seed: 1
@@ -164,7 +164,7 @@ attotree_s: 10000
 
 Configuration keys:
 
-- **`k_values`** — list of k-mer sizes to evaluate
+- **`kmer_sizes`** — list of k-mer sizes to evaluate
 - **`random_seed`** — base seed controlling reproducible dataset shuffling and randomized output ordering
 - **`sampling_conf`** — geometric subsampling density for automatically derived `N` values
 - **`matrices`** — enable or disable the `kmer`, `unitig`, and `uniqrow` matrix families

@@ -43,9 +43,8 @@ clean: ## Clean
 		10_runs/{*.runs,*.time,*.time.tmp} \
 		11_final_data.tsv
 	rm -vfr 04_indices/*/ 07_tsp/*/
-	$(MAKE) -C _build_dists_v6 clean
-	rm -f _build_dists
 
 cleanall: clean ## Clean all
+	$(MAKE) -C _build_dists_v6 clean
 
 view: ## View output

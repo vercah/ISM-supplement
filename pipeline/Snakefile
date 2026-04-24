@@ -127,14 +127,14 @@ n_genomes_by_dataset = {
     for dataset in datasets
 }
 run_outputs = [
-    f"11_runs/{dataset}_{order}_k{k}_N{n}_{matrix}.runs"
+    f"10_runs/{dataset}_{order}_k{k}_N{n}_{matrix}.runs"
     for dataset in datasets
     for k in kmer_sizes
     for n in n_genomes_by_dataset[dataset]
     for order in enabled_methods
     for matrix in matrix_types
 ]
-FINAL_TSV = "final_data.tsv"
+FINAL_TSV = "11_final_data.tsv"
 
 NON_SINGLETON_N = r"(?:[2-9]|[1-9][0-9]+)"
 
@@ -235,10 +235,10 @@ rule generate_distances_from_dump:
         unitigs="05_dumps/{dataset}_k{k}.unitigs.fa",
     output:
         dists=expand(
-            "07_ham_dists/{{dataset}}_k{{k}}_{type}.dists.txt.xz",
+            "06_ham_dists/{{dataset}}_k{{k}}_{type}.dists.txt.xz",
             type=matrix_types,
         ),
-        time="07_ham_dists/{dataset}_k{k}.build_dists.time",
+        time="06_ham_dists/{dataset}_k{k}.build_dists.time",
     threads: 10
     params:
         enabled_matrix_types=" ".join(matrix_types),
@@ -249,15 +249,15 @@ rule generate_distances_from_dump:
         ../bin/galitime \\
             -l "{output.time}" \\
             -n "{params.experiment}" \\
-            "./_build_dists 05_dumps {wildcards.dataset} {wildcards.k} 07_ham_dists {threads}"
+            "./_build_dists 05_dumps {wildcards.dataset} {wildcards.k} 06_ham_dists {threads}"
         for matrix in {params.enabled_matrix_types}; do
-            xz -9 "07_ham_dists/{wildcards.dataset}_k{wildcards.k}_${{matrix}}.dists.txt"
+            xz -9 "06_ham_dists/{wildcards.dataset}_k{wildcards.k}_${{matrix}}.dists.txt"
         done
         if [ -n "{params.disabled_matrix_types}" ]; then
             for matrix in {params.disabled_matrix_types}; do
                 rm -f \\
-                    "07_ham_dists/{wildcards.dataset}_k{wildcards.k}_${{matrix}}.dists.txt" \\
-                    "07_ham_dists/{wildcards.dataset}_k{wildcards.k}_${{matrix}}.dists.txt.xz"
+                    "06_ham_dists/{wildcards.dataset}_k{wildcards.k}_${{matrix}}.dists.txt" \\
+                    "06_ham_dists/{wildcards.dataset}_k{wildcards.k}_${{matrix}}.dists.txt.xz"
             done
         fi
 
@@ -272,10 +272,10 @@ rule generate_distances_from_dump:
 rule export_tsp_instance:
     input:
         selection="03_selection/{dataset}.N{N}.txt",
-        dists="07_ham_dists/{dataset}_k{k}_{type}.dists.txt.xz",
+        dists="06_ham_dists/{dataset}_k{k}_{type}.dists.txt.xz",
     output:
-        tsp="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/instance.tsp",
-        time="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}.export_tsp.time",
+        tsp="07_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/instance.tsp",
+        time="07_tsp/{dataset}_{variant}_k{k}_N{N}_{type}.export_tsp.time",
     wildcard_constraints:
         N=NON_SINGLETON_N,
         variant=r"(optimal|worst)",
@@ -293,11 +293,11 @@ rule export_tsp_instance:
 
 rule run_concorde:
     input:
-        tsp="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/instance.tsp",
+        tsp="07_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/instance.tsp",
     output:
-        sol="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/instance.sol",
-        log="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/log.txt",
-        time="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}.instance.sol.time",
+        sol="07_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/instance.sol",
+        log="07_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/log.txt",
+        time="07_tsp/{dataset}_{variant}_k{k}_N{N}_{type}.instance.sol.time",
     wildcard_constraints:
         N=NON_SINGLETON_N,
     params:
@@ -328,8 +328,8 @@ rule run_attotree:
     input:
         selection="03_selection/{dataset}.N{N}.txt",
     output:
-        nw="09_trees/{dataset}_{method}_N{N}.nw",
-        time="09_trees/{dataset}_{method}_N{N}.nw.time",
+        nw="08_trees/{dataset}_{method}_N{N}.nw",
+        time="08_trees/{dataset}_{method}_N{N}.nw.time",
     wildcard_constraints:
         N=NON_SINGLETON_N,
         method=r"(nj|upgma)",
@@ -361,10 +361,10 @@ rule run_attotree:
 # --------------------------------------
 rule get_tree_order:
     input:
-        nw="09_trees/{dataset}_{method}_N{N}.nw",
+        nw="08_trees/{dataset}_{method}_N{N}.nw",
     output:
-        order="10_orders/{dataset}_{method}_k{k}_N{N}_{type}.txt",
-        time="10_orders/{dataset}_{method}_k{k}_N{N}_{type}.txt.time",
+        order="09_orders/{dataset}_{method}_k{k}_N{N}_{type}.txt",
+        time="09_orders/{dataset}_{method}_k{k}_N{N}_{type}.txt.time",
     wildcard_constraints:
         N=NON_SINGLETON_N,
         method=r"(nj|upgma)",
@@ -383,7 +383,7 @@ rule get_randomized_order:
     input:
         selection="03_selection/{dataset}.N{N}.txt",
     output:
-        order="10_orders/{dataset}_randomized_k{k}_N{N}_{type}.txt",
+        order="09_orders/{dataset}_randomized_k{k}_N{N}_{type}.txt",
     wildcard_constraints:
         N=NON_SINGLETON_N,
     params:
@@ -399,11 +399,11 @@ rule get_randomized_order:
 
 rule extract_tsp_order:
     input:
-        sol="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/instance.sol",
-        tsp="08_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/instance.tsp",
+        sol="07_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/instance.sol",
+        tsp="07_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/instance.tsp",
     output:
-        order="10_orders/{dataset}_{variant}_k{k}_N{N}_{type}.txt",
-        time="10_orders/{dataset}_{variant}_k{k}_N{N}_{type}.txt.time",
+        order="09_orders/{dataset}_{variant}_k{k}_N{N}_{type}.txt",
+        time="09_orders/{dataset}_{variant}_k{k}_N{N}_{type}.txt.time",
     wildcard_constraints:
         N=NON_SINGLETON_N,
         variant=r"(optimal|worst)",
@@ -425,7 +425,7 @@ rule get_singleton_order:
     input:
         selection="03_selection/{dataset}.N1.txt",
     output:
-        order="10_orders/{dataset}_{method}_k{k}_N1_{type}.txt",
+        order="09_orders/{dataset}_{method}_k{k}_N1_{type}.txt",
     wildcard_constraints:
         method=r"(optimal|worst|nj|upgma|randomized)",
     shell:
@@ -437,11 +437,11 @@ rule get_singleton_order:
 # --------------------------------------
 rule compute_final_runs:
     input:
-        dists="07_ham_dists/{dataset}_k{k}_{type}.dists.txt.xz",
-        order="10_orders/{dataset}_{method}_k{k}_N{N}_{type}.txt",
+        dists="06_ham_dists/{dataset}_k{k}_{type}.dists.txt.xz",
+        order="09_orders/{dataset}_{method}_k{k}_N{N}_{type}.txt",
     output:
-        run="11_runs/{dataset}_{method}_k{k}_N{N}_{type}.runs",
-        time="11_runs/{dataset}_{method}_k{k}_N{N}_{type}.runs.time",
+        run="10_runs/{dataset}_{method}_k{k}_N{N}_{type}.runs",
+        time="10_runs/{dataset}_{method}_k{k}_N{N}_{type}.runs.time",
     params:
         experiment=lambda wc: f"final_runs_{wc.dataset}_{wc.method}_k{wc.k}_N{wc.N}_{wc.type}",
     shell:

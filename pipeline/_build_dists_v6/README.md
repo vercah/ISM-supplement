@@ -60,13 +60,13 @@ make
 ## Run
 
 ```bash
-./_build_dists_v6 05_dumps ngono 31 07_ham_dists 10
+./_build_dists_v6 05_dumps ngono 31 06_ham_dists 10
 ```
 
 Optional knobs:
 
 ```bash
-./_build_dists_v6 05_dumps ngono 31 07_ham_dists 10 \
+./_build_dists_v6 05_dumps ngono 31 06_ham_dists 10 \
   --block-size 512 \
   --rows-per-task 4096 \
   --memory-gb 10

@@ -37,12 +37,13 @@ clean: clean-cpp ## Clean
 		03_selection/*.txt \
 		04_indices/{*.fur,*.time,*.time.tmp} \
 		05_dumps/{*.fa,*.txt,*.time,*.time.tmp} \
-		07_ham_dists/{*.txt,*.xz,*.time,*.time.tmp} \
-		08_tsp/*.{time,time.tmp} \
-		09_trees/{*.nw,*.time,*.time.tmp} \
-		10_orders/{*.txt,*.time,*.time.tmp} \
-		11_runs/{*.runs,*.time,*.time.tmp}
-	rm -vfr 04_indices/*/ 08_tsp/*/
+		06_ham_dists/{*.txt,*.xz,*.time,*.time.tmp} \
+		07_tsp/*.{time,time.tmp} \
+		08_trees/{*.nw,*.time,*.time.tmp} \
+		09_orders/{*.txt,*.time,*.time.tmp} \
+		10_runs/{*.runs,*.time,*.time.tmp} \
+		11_final_data.tsv
+	rm -vfr 04_indices/*/ 07_tsp/*/
 
 clean-cpp:
 	$(MAKE) -C _build_dists_v4 clean

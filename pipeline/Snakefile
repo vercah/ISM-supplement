@@ -143,13 +143,13 @@ wildcard_constraints:
     type=r"(kmer|unitig|uniqrow)"
 
 
-rule all:
+rule s00_all:
     input:
         run_outputs,
         FINAL_TSV,
 
 
-rule randomization:
+rule s02_randomization:
     input:
         txt="01_datasets/{dataset}.txt",
     output:
@@ -165,9 +165,9 @@ rule randomization:
     """
 
 
-rule create_selection:
+rule s03_create_selection:
     input:
-        txt=rules.randomization.output,
+        txt=rules.s02_randomization.output,
     output:
         txt="03_selection/{dataset}.N{N}.txt",
     shell:
@@ -176,7 +176,7 @@ rule create_selection:
     """
 
 
-rule generate_fulgor_index:
+rule s04_generate_fulgor_index:
     input:
         txt="01_datasets/{dataset}.txt",
     output:
@@ -186,7 +186,7 @@ rule generate_fulgor_index:
     params:
         minimizer_size=lambda wc: min(20, int(wc.k) - 2),
         ram_gib=12,
-        experiment=lambda wc: f"fulgor_index_{wc.dataset}_k{wc.k}",
+        experiment=lambda wc: f"s04_generate_fulgor_index_{wc.dataset}_k{wc.k}",
     shell:
         """
         ulimit -n 4096
@@ -205,7 +205,7 @@ rule generate_fulgor_index:
         """
 
 
-rule dump_fulgor_files:
+rule s05_dump_fulgor_files:
     input:
         fur="04_indices/{dataset}_k{k}.fur",
     output:
@@ -215,7 +215,7 @@ rule dump_fulgor_files:
         time="05_dumps/{dataset}_k{k}.dump.time",
     params:
         prefix="04_indices/{dataset}_k{k}",
-        experiment=lambda wc: f"fulgor_dump_{wc.dataset}_k{wc.k}",
+        experiment=lambda wc: f"s05_dump_fulgor_files_{wc.dataset}_k{wc.k}",
     shell:
         """
         ../bin/galitime \\
@@ -228,7 +228,7 @@ rule dump_fulgor_files:
     """
 
 
-rule generate_distances_from_dump:
+rule s06_generate_distances_from_dump:
     input:
         sets="05_dumps/{dataset}_k{k}.color_sets.txt",
         meta="05_dumps/{dataset}_k{k}.metadata.txt",
@@ -243,7 +243,7 @@ rule generate_distances_from_dump:
     params:
         enabled_matrix_types=" ".join(matrix_types),
         disabled_matrix_types=" ".join(disabled_matrix_types),
-        experiment=lambda wc: f"build_dists_{wc.dataset}_k{wc.k}",
+        experiment=lambda wc: f"s06_generate_distances_from_dump_{wc.dataset}_k{wc.k}",
     shell:
         """
         ../bin/galitime \\
@@ -269,7 +269,7 @@ rule generate_distances_from_dump:
 # ----------------------------
 
 
-rule export_tsp_instance:
+rule s07_export_tsp_instance:
     input:
         selection="03_selection/{dataset}.N{N}.txt",
         dists="06_ham_dists/{dataset}_k{k}_{type}.dists.txt.xz",
@@ -280,7 +280,10 @@ rule export_tsp_instance:
         N=NON_SINGLETON_N,
         variant=r"(optimal|worst)",
     params:
-        experiment=lambda wc: f"tsp_export_{wc.variant}_{wc.dataset}_k{wc.k}_N{wc.N}_{wc.type}",
+        experiment=lambda wc: (
+            f"s07_export_tsp_instance_{wc.variant}_{wc.dataset}_k{wc.k}_"
+            f"N{wc.N}_{wc.type}"
+        ),
         output_flag=lambda wc: "-o" if wc.variant == "optimal" else "-w",
     shell:
         """
@@ -291,7 +294,7 @@ rule export_tsp_instance:
     """
 
 
-rule run_concorde:
+rule s07_run_concorde:
     input:
         tsp="07_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/instance.tsp",
     output:
@@ -302,7 +305,10 @@ rule run_concorde:
         N=NON_SINGLETON_N,
     params:
         concorde=CONCORDE_BIN,
-        experiment=lambda wc: f"concorde_{wc.variant}_N{wc.N}_{wc.type}",
+        experiment=lambda wc: (
+            f"s07_run_concorde_{wc.variant}_{wc.dataset}_k{wc.k}_"
+            f"N{wc.N}_{wc.type}"
+        ),
     shell:
         """
         repo_pwd="$PWD"
@@ -324,7 +330,7 @@ rule run_concorde:
 # --------------------------------------
 
 
-rule run_attotree:
+rule s08_run_attotree:
     input:
         selection="03_selection/{dataset}.N{N}.txt",
     output:
@@ -338,7 +344,7 @@ rule run_attotree:
         attotree_k=attotree_k,
         attotree_s=attotree_s,
         experiment=lambda wc: (
-            f"attotree_{wc.dataset}_{wc.method}_N{wc.N}_"
+            f"s08_run_attotree_{wc.dataset}_{wc.method}_N{wc.N}_"
             f"k{attotree_k}_s{attotree_s}"
         ),
     shell:
@@ -359,7 +365,7 @@ rule run_attotree:
 # --------------------------------------
 # -----------------ORDERS---------------------
 # --------------------------------------
-rule get_tree_order:
+rule s09_get_tree_order:
     input:
         nw="08_trees/{dataset}_{method}_N{N}.nw",
     output:
@@ -369,7 +375,10 @@ rule get_tree_order:
         N=NON_SINGLETON_N,
         method=r"(nj|upgma)",
     params:
-        experiment=lambda wc: f"tree_order_{wc.dataset}_{wc.method}_k{wc.k}_N{wc.N}_{wc.type}",
+        experiment=lambda wc: (
+            f"s09_get_tree_order_{wc.dataset}_{wc.method}_k{wc.k}_"
+            f"N{wc.N}_{wc.type}"
+        ),
     shell:
         """
         ../bin/galitime \\
@@ -379,7 +388,7 @@ rule get_tree_order:
         """
 
 
-rule get_randomized_order:
+rule s09_get_randomized_order:
     input:
         selection="03_selection/{dataset}.N{N}.txt",
     output:
@@ -397,7 +406,7 @@ rule get_randomized_order:
     """
 
 
-rule extract_tsp_order:
+rule s09_extract_tsp_order:
     input:
         sol="07_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/instance.sol",
         tsp="07_tsp/{dataset}_{variant}_k{k}_N{N}_{type}/instance.tsp",
@@ -408,7 +417,10 @@ rule extract_tsp_order:
         N=NON_SINGLETON_N,
         variant=r"(optimal|worst)",
     params:
-        experiment=lambda wc: f"tsp_order_{wc.dataset}_{wc.variant}_k{wc.k}_N{wc.N}_{wc.type}",
+        experiment=lambda wc: (
+            f"s09_extract_tsp_order_{wc.dataset}_{wc.variant}_k{wc.k}_"
+            f"N{wc.N}_{wc.type}"
+        ),
     shell:
         """
         ../bin/galitime \\
@@ -421,7 +433,7 @@ rule extract_tsp_order:
     """
 
 
-rule get_singleton_order:
+rule s09_get_singleton_order:
     input:
         selection="03_selection/{dataset}.N1.txt",
     output:
@@ -435,7 +447,7 @@ rule get_singleton_order:
 # --------------------------------------
 # -----------------FINAL STATS---------------------
 # --------------------------------------
-rule compute_final_runs:
+rule s10_compute_final_runs:
     input:
         dists="06_ham_dists/{dataset}_k{k}_{type}.dists.txt.xz",
         order="09_orders/{dataset}_{method}_k{k}_N{N}_{type}.txt",
@@ -443,7 +455,10 @@ rule compute_final_runs:
         run="10_runs/{dataset}_{method}_k{k}_N{N}_{type}.runs",
         time="10_runs/{dataset}_{method}_k{k}_N{N}_{type}.runs.time",
     params:
-        experiment=lambda wc: f"final_runs_{wc.dataset}_{wc.method}_k{wc.k}_N{wc.N}_{wc.type}",
+        experiment=lambda wc: (
+            f"s10_compute_final_runs_{wc.dataset}_{wc.method}_k{wc.k}_"
+            f"N{wc.N}_{wc.type}"
+        ),
     shell:
         """
         # validation
@@ -475,7 +490,7 @@ rule compute_final_runs:
     """
 
 
-rule aggregate_final_tsv:
+rule s11_aggregate_final_tsv:
     input:
         run_outputs,
     output:

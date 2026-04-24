@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Defaults correspond to:
-#   ./_build_dists_v1.py 05_dumps gisp 31 07_ham_dists 10
+#   ./_build_dists_v1.py 05_dumps gisp 31 06_ham_dists 10
 
 set -euo pipefail
 
@@ -9,7 +9,7 @@ PIPELINE_DIR="${1:-.}"
 INPUT_DIR="${2:-05_dumps}"
 DATASET="${3:-gisp}"
 K="${4:-31}"
-OUT_BASE="${5:-07_ham_dists}"
+OUT_BASE="${5:-06_ham_dists}"
 THREADS="${6:-10}"
 
 cd "$PIPELINE_DIR"

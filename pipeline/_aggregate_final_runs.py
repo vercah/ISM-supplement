@@ -18,7 +18,7 @@ HEADER = [
 ]
 RUN_KEYS = ["n_bit_changes", "n_runs", "n_cylinder_runs"]
 RUN_PATH_RE = re.compile(
-    r"^11_runs/(?P<dataset>.+)_(?P<method>[^_]+)_k(?P<k>\d+)_N(?P<N>\d+)_(?P<type>[^_/]+)\.runs$"
+    r"^10_runs/(?P<dataset>.+)_(?P<method>[^_]+)_k(?P<k>\d+)_N(?P<N>\d+)_(?P<type>[^_/]+)\.runs$"
 )
 
 
@@ -32,7 +32,7 @@ def parse_run_path(path):
     if not match:
         raise InputError(
             f"Malformed .runs filename {path!r}; expected "
-            "11_runs/{dataset}_{method}_k{k}_N{N}_{type}.runs"
+            "10_runs/{dataset}_{method}_k{k}_N{N}_{type}.runs"
         )
     return match.groupdict()
 
@@ -87,7 +87,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Aggregate final .runs files into a single TSV."
     )
-    parser.add_argument("runs", nargs="+", help="11_runs/*.runs files")
+    parser.add_argument("runs", nargs="+", help="10_runs/*.runs files")
     args = parser.parse_args()
 
     try:

@@ -181,7 +181,7 @@ Configuration keys:
 
 More generally, a positive value `c` means `c` logarithmic steps per order of magnitude. Candidate values are computed with standard Python `round(...)`, clamped to the dataset size, deduplicated after rounding, and returned in ascending order. The final full dataset size is always included. For example, dataset size `7` gives `[7]` when `sampling_conf: 0` and `[1, 7]` when `sampling_conf: 1`; dataset size `100` gives `[1, 10, 100]` when `sampling_conf: 1` and `[1, 3, 10, 32, 100]` when `sampling_conf: 2`.
 
-Selections remain nested: `02_order_randomization/{dataset}.txt` is the reproducibly shuffled master list, and `03_selection/{dataset}.N{N}.txt` is the first `N` entries from that list, sorted for easier debugging. Therefore larger `N` selections still contain the smaller selected set. When `N = 1`, the pipeline writes the single selected genome directly as the order file in `10_orders/` for each enabled ordering family, skips Concorde and attotree, and still runs the normal final evaluation so `11_runs/..._N1_...runs` is produced.
+Selections remain nested: `02_order_randomization/{dataset}.txt` is the reproducibly shuffled master list, and `03_selection/{dataset}.N{N}.txt` is the first `N` entries from that list, sorted for easier debugging. Therefore larger `N` selections still contain the smaller selected set. When `N = 1`, the pipeline writes the single selected genome directly as the order file in `09_orders/` for each enabled ordering family, skips Concorde and attotree, and still runs the normal final evaluation so `10_runs/..._N1_...runs` is produced.
 
 Two common edits:
 
@@ -210,7 +210,7 @@ cd pipeline
 make
 ```
 
-All results will be generated in the `11_runs/` directory.
+Per-order run results will be generated in the `10_runs/` directory. The aggregate TSV is generated as `11_final_data.tsv`.
 
 ## Precomputed results
 

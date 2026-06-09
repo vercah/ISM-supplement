@@ -110,8 +110,7 @@ def process(fn, out_optimal, out_worst, sel):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="generate optimal and/or worst-case TSP instances"
-    )
+        description="generate optimal and/or worst-case TSP instances")
     parser.add_argument("fn", metavar="input.txt", help="distance file")
     parser.add_argument("sel", help="selection file")
     parser.add_argument(
@@ -127,7 +126,8 @@ def main():
 
     args = parser.parse_args()
     if not args.out_optimal and not args.out_worst:
-        parser.error("at least one of --out-optimal or --out-worst is required")
+        parser.error(
+            "at least one of --out-optimal or --out-worst is required")
     process(args.fn, args.out_optimal, args.out_worst, args.sel)
 
 

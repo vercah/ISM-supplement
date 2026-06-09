@@ -55,12 +55,12 @@ def process(inst_fn, sol_fn):
     if n_removed > 0:
         non_consec = len(real_tour) - len(deduped) - sum(
             1 for i in range(1, len(real_tour))
-            if real_tour[i] == real_tour[i - 1]
-        )
+            if real_tour[i] == real_tour[i - 1])
         if non_consec > 0:
-            print(f"WARNING: {non_consec} non-consecutive duplicate(s) "
-                  f"removed (likely caused by distance rounding)",
-                  file=sys.stderr)
+            print(
+                f"WARNING: {non_consec} non-consecutive duplicate(s) "
+                f"removed (likely caused by distance rounding)",
+                file=sys.stderr)
 
     print(*deduped, sep="\n")
 

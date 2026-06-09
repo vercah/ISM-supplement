@@ -5,7 +5,6 @@ import os
 import re
 import sys
 
-
 HEADER = [
     "dataset",
     "method",
@@ -30,10 +29,8 @@ def parse_run_path(path):
     normalized = os.path.normpath(path)
     match = RUN_PATH_RE.match(normalized)
     if not match:
-        raise InputError(
-            f"Malformed .runs filename {path!r}; expected "
-            "10_runs/{dataset}_{method}_k{k}_N{N}_{type}.runs"
-        )
+        raise InputError(f"Malformed .runs filename {path!r}; expected "
+                         "10_runs/{dataset}_{method}_k{k}_N{N}_{type}.runs")
     return match.groupdict()
 
 
@@ -43,19 +40,20 @@ def parse_run_file(path):
         for line_number, line in enumerate(fh, 1):
             line = line.rstrip("\n")
             if not line:
-                raise InputError(f"{path}:{line_number}: empty lines are not allowed")
+                raise InputError(
+                    f"{path}:{line_number}: empty lines are not allowed")
 
             fields = line.split("\t")
             if len(fields) != 2:
                 raise InputError(
-                    f"{path}:{line_number}: expected two tab-separated fields"
-                )
+                    f"{path}:{line_number}: expected two tab-separated fields")
 
             key, value = fields
             if key not in RUN_KEYS:
                 raise InputError(f"{path}:{line_number}: unknown key {key!r}")
             if key in values:
-                raise InputError(f"{path}:{line_number}: duplicate key {key!r}")
+                raise InputError(
+                    f"{path}:{line_number}: duplicate key {key!r}")
             if not value.isdigit():
                 raise InputError(
                     f"{path}:{line_number}: value for {key!r} must be an integer"
@@ -85,8 +83,7 @@ def write_tsv(paths):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Aggregate final .runs files into a single TSV."
-    )
+        description="Aggregate final .runs files into a single TSV.")
     parser.add_argument("runs", nargs="+", help="10_runs/*.runs files")
     args = parser.parse_args()
 

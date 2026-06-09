@@ -6,9 +6,11 @@ import random
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Deterministically shuffle input lines using a seed."
-    )
-    parser.add_argument("--seed", type=int, required=True, help="Base integer seed.")
+        description="Deterministically shuffle input lines using a seed.")
+    parser.add_argument("--seed",
+                        type=int,
+                        required=True,
+                        help="Base integer seed.")
     parser.add_argument("input", help="Input text file.")
     parser.add_argument("output", help="Output text file.")
     return parser.parse_args()

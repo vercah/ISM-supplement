@@ -110,7 +110,6 @@ enabled_methods = [
     for config_name, internal_name in KNOWN_OUTPUTS.items()
     if output_flags[config_name]
 ]
-HAM_TREE_METHODS = ("hamnj", "hamupgma")
 attotree_k = config.get("attotree_k", 31)
 attotree_s = config.get("attotree_s", 10000)
 
@@ -373,6 +372,7 @@ rule s08_convert_ham_dists_to_phylip:
         selection="03_selection/{dataset}.N{N}.txt",
     output:
         phylip="08_trees/{dataset}_{method}_k{k}_N{N}_{type}.phylip",
+        time="08_trees/{dataset}_{method}_k{k}_N{N}_{type}.phylip.time",
     wildcard_constraints:
         N=NON_SINGLETON_N,
         method=r"(hamnj|hamupgma)",
@@ -384,7 +384,7 @@ rule s08_convert_ham_dists_to_phylip:
     shell:
         """
         ../bin/galitime \\
-            -l "{output.phylip}.time" \\
+            -l "{output.time}" \\
             -n "{params.experiment}" \\
             "./_dists_to_phylip.py \\
                 {input.dists} \\

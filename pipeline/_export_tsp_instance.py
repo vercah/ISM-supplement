@@ -63,9 +63,14 @@ def create_matrix_from_file(fn, sel, worst):
     keys = sorted(list(keys))
     n_real = len(keys)
 
-    extra = 35 if n_real < 35 else 0
-    keys += [keys[0]] * extra
-    dim = n_real + extra
+    MIN_CONCORDE_DIMENSION = 35
+    n_dummy_separators = 1
+
+    # add enough duplicate genomes so that the final Concorde instance has at least 35 nodes.
+    nb_duplicates = max(0,
+                        MIN_CONCORDE_DIMENSION - n_dummy_separators - n_real)
+    keys += [keys[0]] * nb_duplicates
+    dim = n_real + nb_duplicates
 
     if worst:
         orig_max = max(d.values())
@@ -79,8 +84,10 @@ def create_matrix_from_file(fn, sel, worst):
     if max_dist > threshold:  # concorde threshold
         print("scaling applied due to large distances")
         scale_factor = max_dist / threshold  # integer factor
+        # positive distances stay at least 1 after scaling (and 0 stays 0)
         for k in d:
-            d[k] = max(1, int(round(d[k] / scale_factor)))
+            if d[k] > 0:
+                d[k] = max(1, int(round(d[k] / scale_factor)))
 
     arr = np.zeros((dim, dim), dtype=np.int32)
     for i, x in enumerate(keys):
@@ -98,12 +105,12 @@ def create_matrix_from_file(fn, sel, worst):
 
 def process(fn, out_optimal, out_worst, sel):
     if out_optimal:
-        keys, arr = create_matrix_from_file(fn, sel, False)
+        keys, arr = create_matrix_from_file(fn, sel, worst=False)
         with open(out_optimal, "w") as fo:
             write_tsp_instance(arr, keys, fo)
 
     if out_worst:
-        keys, worst_arr = create_matrix_from_file(fn, sel, True)
+        keys, worst_arr = create_matrix_from_file(fn, sel, worst=True)
         with open(out_worst, "w") as fo:
             write_tsp_instance(worst_arr, keys, fo)
 

@@ -14,13 +14,13 @@ For a color set row `S` and weight `w`, the contribution to the Hamming distance
 
 The three weightings are:
 
-- `unitig` – one per dumped unitig
-- `kmer` – number of kmers implied by unitig length
-- `uniqrow` – one per distinct dumped color set
+- `unitig` - one per dumped unitig
+- `kmer` - number of kmers implied by unitig length
+- `uniqrow` - one per distinct dumped color set
 
 ## Why this version exists
 
-The Python v1/v2 implementation uses dense `num_colors × num_colors` matrices and updates rows against their complements, which is fundamentally memory-heavy and slow at 10k colors.
+The Python v1/v2 implementation uses dense `num_colors x num_colors` matrices and updates rows against their complements, which is fundamentally memory-heavy and slow at 10k colors.
 
 The C++ v4/v5 code switches to blockwise output and the identity
 
@@ -30,9 +30,9 @@ which removes the need for a full global dense matrix, but it still pays too muc
 
 This Rust v6 uses an adaptive hybrid:
 
-- **cooccurrence mode** for sparse rows – enumerate only `S choose 2`
-- **direct-difference mode** for dense rows – enumerate only `S × complement(S)`
-- **streamed block writing** – never materialize a full `n × n` matrix
+- **cooccurrence mode** for sparse rows - enumerate only `S choose 2`
+- **direct-difference mode** for dense rows - enumerate only `S x complement(S)`
+- **streamed block writing** - never materialize a full `n x n` matrix
 
 That is the right shape for datasets where rows are either very sparse or nearly universal.
 

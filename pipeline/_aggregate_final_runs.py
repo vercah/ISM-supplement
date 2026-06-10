@@ -16,6 +16,8 @@ HEADER = [
     "n_cylinder_runs",
 ]
 RUN_KEYS = ["n_bit_changes", "n_runs", "n_cylinder_runs"]
+# Method tokens may contain hyphens but not underscores, because underscores
+# delimit the filename fields.
 RUN_PATH_RE = re.compile(
     r"^10_runs/(?P<dataset>.+)_(?P<method>[^_]+)_k(?P<k>\d+)_N(?P<N>\d+)_(?P<type>[^_/]+)\.runs$"
 )

@@ -53,13 +53,13 @@ matrices:
 # upgma_hamming  - UPGMA tree order from quicktree on Hamming distances
 # randomized     - deterministic seed-based shuffled order
 orders:
+  randomized: true
   best_tsp: true
   worst_tsp: true
-  nj_attotree: true
-  upgma_attotree: true
   nj_hamming: true
+  nj_attotree: true
   upgma_hamming: true
-  randomized: true
+  upgma_attotree: true
 
 # --------------------------------------------------------------------
 # Attotree parameters
@@ -68,3 +68,4 @@ orders:
 # Changing these changes attotree's output, so prior results become invalid.
 attotree_k: 21
 attotree_s: 10000
+

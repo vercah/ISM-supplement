@@ -10,14 +10,14 @@ if not os.path.exists(CONCORDE_BIN):
     raise FileNotFoundError(f"Concorde binary not found at {CONCORDE_BIN}")
 
 KNOWN_MATRIX_TYPES = ("kmer", "unitig", "uniqrow")
-KNOWN_OUTPUTS = {
+KNOWN_ORDERS = {
     "best_tsp": "optimal",
     "worst_tsp": "worst",
-    "nj_attotree": "nj",
-    "upgma_attotree": "upgma",
+    "nj_attotree": "nj-attotree",
+    "upgma_attotree": "upgma-attotree",
     "randomized": "randomized",
-    "nj_ham": "hamnj",
-    "upgma_ham": "hamupgma",
+    "nj_hamming": "nj-hamming",
+    "upgma_hamming": "upgma-hamming",
 }
 
 
@@ -85,17 +85,17 @@ def compute_sample_sizes(total_genomes, sampling_conf):
 
 
 default_matrix_flags = {matrix: True for matrix in KNOWN_MATRIX_TYPES}
-default_output_flags = {output: True for output in KNOWN_OUTPUTS}
+default_order_flags = {order: True for order in KNOWN_ORDERS}
 
 matrix_flags = resolve_enabled_flags(
     "matrices",
     config.get("matrices", {}),
     default_matrix_flags,
 )
-output_flags = resolve_enabled_flags(
-    "outputs",
-    config.get("outputs", {}),
-    default_output_flags,
+order_flags = resolve_enabled_flags(
+    "orders",
+    config.get("orders", {}),
+    default_order_flags,
 )
 
 kmer_sizes = config.get("kmer_sizes", [31])
@@ -107,8 +107,8 @@ disabled_matrix_types = [
 ]
 enabled_methods = [
     internal_name
-    for config_name, internal_name in KNOWN_OUTPUTS.items()
-    if output_flags[config_name]
+    for config_name, internal_name in KNOWN_ORDERS.items()
+    if order_flags[config_name]
 ]
 attotree_k = config.get("attotree_k", 31)
 attotree_s = config.get("attotree_s", 10000)
@@ -127,7 +127,7 @@ n_genomes_by_dataset = {
     dataset: compute_sample_sizes(total_genomes_by_dataset[dataset], sampling_conf)
     for dataset in datasets
 }
-run_outputs = [
+final_run_paths = [
     f"10_runs/{dataset}_{order}_k{k}_N{n}_{matrix}.runs"
     for dataset in datasets
     for k in kmer_sizes
@@ -149,7 +149,7 @@ wildcard_constraints:
 
 rule s00_all:
     input:
-        run_outputs,
+        final_run_paths,
         FINAL_TSV,
         FINAL_TIME_TSV,
 
@@ -342,11 +342,12 @@ rule s08_run_attotree:
         time="08_trees/{dataset}_{method}_N{N}.nw.time",
     wildcard_constraints:
         N=NON_SINGLETON_N,
-        method=r"(nj|upgma)",
+        method=r"(nj-attotree|upgma-attotree)",
     threads: 8
     params:
         attotree_k=attotree_k,
         attotree_s=attotree_s,
+        attotree_method=lambda wc: wc.method.split("-")[0],
         experiment=lambda wc: (
             f"s08_run_attotree_{wc.dataset}_{wc.method}_N{wc.N}_"
             f"k{attotree_k}_s{attotree_s}"
@@ -358,7 +359,7 @@ rule s08_run_attotree:
             -n "{params.experiment}" \\
             "attotree \\
                 -t {threads} \\
-                -m {wildcards.method} \\
+                -m {params.attotree_method} \\
                 -k {params.attotree_k} \\
                 -s {params.attotree_s} \\
                 -L {input.selection} \\
@@ -375,7 +376,7 @@ rule s08_convert_ham_dists_to_phylip:
         time="08_trees/{dataset}_{method}_k{k}_N{N}_{type}.phylip.time",
     wildcard_constraints:
         N=NON_SINGLETON_N,
-        method=r"(hamnj|hamupgma)",
+        method=r"(nj-hamming|upgma-hamming)",
     params:
         experiment=lambda wc: (
             f"s08_convert_ham_dists_to_phylip_{wc.dataset}_{wc.method}_"
@@ -401,9 +402,9 @@ rule s08_run_quicktree_ham:
         time="08_trees/{dataset}_{method}_k{k}_N{N}_{type}.nw.time",
     wildcard_constraints:
         N=NON_SINGLETON_N,
-        method=r"(hamnj|hamupgma)",
+        method=r"(nj-hamming|upgma-hamming)",
     params:
-        flags=lambda wc: "-upgma" if wc.method == "hamupgma" else "",
+        flags=lambda wc: "-upgma" if wc.method == "upgma-hamming" else "",
         experiment=lambda wc: (
             f"s08_run_quicktree_ham_{wc.dataset}_{wc.method}_"
             f"k{wc.k}_N{wc.N}_{wc.type}"
@@ -428,7 +429,7 @@ rule s09_get_tree_order:
         time="09_orders/{dataset}_{method}_k{k}_N{N}_{type}.txt.time",
     wildcard_constraints:
         N=NON_SINGLETON_N,
-        method=r"(nj|upgma)",
+        method=r"(nj-attotree|upgma-attotree)",
     params:
         experiment=lambda wc: (
             f"s09_get_tree_order_{wc.dataset}_{wc.method}_k{wc.k}_"
@@ -451,7 +452,7 @@ rule s09_get_ham_tree_order:
         time="09_orders/{dataset}_{method}_k{k}_N{N}_{type}.txt.time",
     wildcard_constraints:
         N=NON_SINGLETON_N,
-        method=r"(hamnj|hamupgma)",
+        method=r"(nj-hamming|upgma-hamming)",
     params:
         experiment=lambda wc: (
             f"s09_get_ham_tree_order_{wc.dataset}_{wc.method}_"
@@ -517,7 +518,7 @@ rule s09_get_singleton_order:
     output:
         order="09_orders/{dataset}_{method}_k{k}_N1_{type}.txt",
     wildcard_constraints:
-        method=r"(optimal|worst|nj|upgma|randomized|hamnj|hamupgma)",
+        method=r"(optimal|worst|nj-attotree|upgma-attotree|randomized|nj-hamming|upgma-hamming)",
     shell:
         "cp {input.selection} {output.order}"
 
@@ -570,7 +571,7 @@ rule s10_compute_final_runs:
 
 rule s11_aggregate_final_tsv:
     input:
-        run_outputs,
+        final_run_paths,
     output:
         FINAL_TSV,
     shell:
@@ -581,7 +582,7 @@ rule s11_aggregate_final_tsv:
 
 rule s11_aggregate_final_time_tsv:
     input:
-        run_outputs,
+        final_run_paths,
     output:
         FINAL_TIME_TSV,
     shell:

@@ -66,5 +66,5 @@ orders:
 # --------------------------------------------------------------------
 # Passed to every `attotree` invocation as `-k` and `-s`.
 # Changing these changes attotree's output, so prior results become invalid.
-attotree_k: 31
+attotree_k: 21
 attotree_s: 10000

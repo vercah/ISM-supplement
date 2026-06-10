@@ -18,6 +18,8 @@ KNOWN_OUTPUTS = {
     "randomized": "randomized",
     "nj_ham": "hamnj",
     "upgma_ham": "hamupgma",
+    "nj_ham_corr": "hamcorrnj",
+    "upgma_ham_corr": "hamcorrupgma",
 }
 
 
@@ -243,6 +245,10 @@ rule s06_generate_distances_from_dump:
             "06_ham_dists/{{dataset}}_k{{k}}_{type}.dists.txt.xz",
             type=matrix_types,
         ),
+        counts=expand(
+            "06_ham_dists/{{dataset}}_k{{k}}_{type}_counts.tsv",
+            type=matrix_types,
+        ),
         time="06_ham_dists/{dataset}_k{k}.build_dists.time",
     threads: 10
     params:
@@ -262,10 +268,37 @@ rule s06_generate_distances_from_dump:
             for matrix in {params.disabled_matrix_types}; do
                 rm -f \\
                     "06_ham_dists/{wildcards.dataset}_k{wildcards.k}_${{matrix}}.dists.txt" \\
-                    "06_ham_dists/{wildcards.dataset}_k{wildcards.k}_${{matrix}}.dists.txt.xz"
+                    "06_ham_dists/{wildcards.dataset}_k{wildcards.k}_${{matrix}}.dists.txt.xz" \\
+                    "06_ham_dists/{wildcards.dataset}_k{wildcards.k}_${{matrix}}_counts.tsv"
             done
         fi
 
+        """
+
+
+rule s06_derive_ham_corr_dists:
+    input:
+        ham="06_ham_dists/{dataset}_k{k}_{type}.dists.txt.xz",
+        counts="06_ham_dists/{dataset}_k{k}_{type}_counts.tsv",
+    output:
+        dists="06_ham_corr_dists/{dataset}_k{k}_{type}.dists.txt.xz",
+        time="06_ham_corr_dists/{dataset}_k{k}_{type}.derive.time",
+    params:
+        raw="06_ham_corr_dists/{dataset}_k{k}_{type}.dists.txt",
+        experiment=lambda wc: (
+            f"s06_derive_ham_corr_dists_{wc.dataset}_k{wc.k}_{wc.type}"
+        ),
+    shell:
+        """
+        ../bin/galitime \\
+            -l "{output.time}" \\
+            -n "{params.experiment}" \\
+            "./_derive_special_dists.py \\
+                {input.ham} \\
+                {input.counts} \\
+                logdiff \\
+                {params.raw}"
+        xz -9 {params.raw}
         """
 
 
@@ -393,6 +426,33 @@ rule s08_convert_ham_dists_to_phylip:
         """
 
 
+rule s08_convert_ham_corr_dists_to_phylip:
+    input:
+        dists="06_ham_corr_dists/{dataset}_k{k}_{type}.dists.txt.xz",
+        selection="03_selection/{dataset}.N{N}.txt",
+    output:
+        phylip="08_trees/{dataset}_{method}_k{k}_N{N}_{type}.phylip",
+        time="08_trees/{dataset}_{method}_k{k}_N{N}_{type}.phylip.time",
+    wildcard_constraints:
+        N=NON_SINGLETON_N,
+        method=r"(hamcorrnj|hamcorrupgma)",
+    params:
+        experiment=lambda wc: (
+            f"s08_convert_ham_corr_dists_to_phylip_{wc.dataset}_{wc.method}_"
+            f"k{wc.k}_N{wc.N}_{wc.type}"
+        ),
+    shell:
+        """
+        ../bin/galitime \\
+            -l "{output.time}" \\
+            -n "{params.experiment}" \\
+            "./_dists_to_phylip.py \\
+                {input.dists} \\
+                {input.selection} \\
+                -o {output.phylip}"
+        """
+
+
 rule s08_run_quicktree_ham:
     input:
         phylip="08_trees/{dataset}_{method}_k{k}_N{N}_{type}.phylip",
@@ -401,9 +461,9 @@ rule s08_run_quicktree_ham:
         time="08_trees/{dataset}_{method}_k{k}_N{N}_{type}.nw.time",
     wildcard_constraints:
         N=NON_SINGLETON_N,
-        method=r"(hamnj|hamupgma)",
+        method=r"(hamnj|hamupgma|hamcorrnj|hamcorrupgma)",
     params:
-        flags=lambda wc: "-upgma" if wc.method == "hamupgma" else "",
+        flags=lambda wc: "-upgma" if wc.method in ("hamupgma", "hamcorrupgma") else "",
         experiment=lambda wc: (
             f"s08_run_quicktree_ham_{wc.dataset}_{wc.method}_"
             f"k{wc.k}_N{wc.N}_{wc.type}"
@@ -451,7 +511,7 @@ rule s09_get_ham_tree_order:
         time="09_orders/{dataset}_{method}_k{k}_N{N}_{type}.txt.time",
     wildcard_constraints:
         N=NON_SINGLETON_N,
-        method=r"(hamnj|hamupgma)",
+        method=r"(hamnj|hamupgma|hamcorrnj|hamcorrupgma)",
     params:
         experiment=lambda wc: (
             f"s09_get_ham_tree_order_{wc.dataset}_{wc.method}_"
@@ -517,7 +577,7 @@ rule s09_get_singleton_order:
     output:
         order="09_orders/{dataset}_{method}_k{k}_N1_{type}.txt",
     wildcard_constraints:
-        method=r"(optimal|worst|nj|upgma|randomized|hamnj|hamupgma)",
+        method=r"(optimal|worst|nj|upgma|randomized|hamnj|hamupgma|hamcorrnj|hamcorrupgma)",
     shell:
         "cp {input.selection} {output.order}"
 

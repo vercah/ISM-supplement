@@ -19,6 +19,22 @@ pub fn compute_cooc_marginals(ds: &Dataset) -> CoocMarginals {
     m
 }
 
+// Per-color marginals over every row. Distance marginals skip Diff rows because
+// the distance formula handles them separately; count files need totals.
+pub fn compute_full_marginals(ds: &Dataset) -> CoocMarginals {
+    let mut m = CoocMarginals::new(ds.n_colors);
+    for row in &ds.rows {
+        let colors = colors_slice(&ds.colors_flat, &row.colors);
+        for &sample in colors {
+            let s = sample as usize;
+            m.unitig[s] += row.unitig_weight;
+            m.kmer[s] += row.kmer_weight;
+            m.uniq[s] += 1;
+        }
+    }
+    m
+}
+
 pub fn pick_block_size(n_colors: usize, threads: usize, memory_gb: usize) -> usize {
     let budget_bytes = (memory_gb as u128) * 1024u128 * 1024u128 * 1024u128;
     let reserve_fraction = 60u128;

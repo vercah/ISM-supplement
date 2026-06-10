@@ -7,7 +7,7 @@ mod write;
 use anyhow::Result;
 use clap::Parser;
 use cli::Cli;
-use compute::{compute_block, compute_cooc_marginals, pick_block_size};
+use compute::{compute_block, compute_cooc_marginals, compute_full_marginals, pick_block_size};
 use parse::{classify_rows, load_dataset};
 use rayon::ThreadPoolBuilder;
 use write::Writers;
@@ -23,6 +23,8 @@ fn main() -> Result<()> {
     let mut ds = load_dataset(&cli.dumpdir, &cli.dataset, cli.k, &cli.out_prefix)?;
     classify_rows(&mut ds);
     let marg = compute_cooc_marginals(&ds);
+    let full_marg = compute_full_marginals(&ds);
+    Writers::write_counts(&ds, &full_marg)?;
 
     let block_size = cli
         .block_size

@@ -19,6 +19,33 @@ impl Writers {
         Ok(Self { unitig, kmer, uniq })
     }
 
+    pub fn write_counts(ds: &Dataset, full_marg: &CoocMarginals) -> Result<()> {
+        let mut f_unitig = BufWriter::new(create_file(&ds.outdir.join(format!(
+            "{}_k{}_unitig_counts.tsv",
+            ds.dataset, ds.k
+        )))?);
+        let mut f_kmer = BufWriter::new(create_file(&ds.outdir.join(format!(
+            "{}_k{}_kmer_counts.tsv",
+            ds.dataset, ds.k
+        )))?);
+        let mut f_uniq = BufWriter::new(create_file(&ds.outdir.join(format!(
+            "{}_k{}_uniqrow_counts.tsv",
+            ds.dataset, ds.k
+        )))?);
+
+        for (i, name) in ds.names.iter().enumerate() {
+            let mut buf = Buffer::new();
+            writeln!(f_unitig, "{}\t{}", name, buf.format(full_marg.unitig[i]))?;
+            writeln!(f_kmer, "{}\t{}", name, buf.format(full_marg.kmer[i]))?;
+            writeln!(f_uniq, "{}\t{}", name, buf.format(full_marg.uniq[i]))?;
+        }
+
+        f_unitig.flush()?;
+        f_kmer.flush()?;
+        f_uniq.flush()?;
+        Ok(())
+    }
+
     pub fn flush(&mut self) -> Result<()> {
         self.unitig.flush()?;
         self.kmer.flush()?;

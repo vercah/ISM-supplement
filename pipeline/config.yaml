@@ -22,6 +22,8 @@ outputs:
   nj_attotree: true
   upgma_attotree: true
   randomized: true
+  nj_ham_corr: true
+  upgma_ham_corr: true
 
 attotree_k: 31
 attotree_s: 10000

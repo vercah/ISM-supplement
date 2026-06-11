@@ -28,7 +28,10 @@ collect_from_dir() {
     local root
     root="$(cd "$1" && pwd)"
 
-    find "$root" -type f \( -name '*.fa' -o -name '*.fasta' -o -name '*.fna' -o -name '*.fa.gz' -o -name '*.fasta.gz' -o -name '*.fna.gz' \) | sort
+    find "$root" -type f ! -name '.*' \
+        \( -name '*.fa' -o -name '*.fasta' -o -name '*.fna' \
+           -o -name '*.fa.gz' -o -name '*.fasta.gz' -o -name '*.fna.gz' \) \
+        | sort
 }
 
 derive_dataset_name() {

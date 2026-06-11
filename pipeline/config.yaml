@@ -1,27 +1,71 @@
+# ====================================================================
+# Pipeline configuration
+# ====================================================================
+# The Snakefile loads this file via `configfile:` and validates every
+# setting at startup. Unknown keys under any mapping are rejected.
+# All bool-maps require at least one entry to be true.
+# ====================================================================
+
+# k-mer sizes to build Fulgor indices for.
 kmer_sizes:
   - 31
 
+# Seed for every deterministic shuffle step:
+# initial dataset randomization and the `randomized` baseline order.
 random_seed: 1
 
-# Geometric subsampling density.
-# 0 keeps the current behavior and uses only the full dataset size.
-# c > 0 uses c rounded logarithmic steps per order of magnitude, always
-# including 1 and the full dataset size, with duplicates removed after rounding.
+# Geometric subsampling density for automatically derived N values.
+#
+# 0 - evaluate only the full dataset size.
+# 1 - evaluate approximately one value per decade: 1, 10, 100, ...
+# 2 - evaluate approximately two values per decade: 1, 3, 10, 32, ...
+#
+# The full dataset size is always included.
 sampling_conf: 0
 
+# --------------------------------------------------------------------
+# Matrix types
+# --------------------------------------------------------------------
+# kmer    - weight each color-set row by the number of k-mers in its unitig
+# unitig  - weight each color-set row by 1 per unitig
+# uniqrow - weight each color-set row by 1 per distinct color set
+#
+# At least one matrix type must be enabled. Every enabled matrix is built
+# from the Fulgor dump and is used as the ground truth for final run-count
+# evaluation against every enabled order.
 matrices:
   kmer: true
   unitig: true
   uniqrow: true
 
-outputs:
-  best_tsp: true
-  worst_tsp: false
-  nj_ham: true
-  upgma_ham: true
-  nj_attotree: true
-  upgma_attotree: true
+# --------------------------------------------------------------------
+# Orders
+# --------------------------------------------------------------------
+# These toggles control which genome orders are generated and evaluated.
+# At least one order must be enabled.
+#
+# best_tsp       - TSP-optimal path via Concorde; minimizes total Hamming distance
+# worst_tsp      - TSP-worst path via Concorde on inverted Hamming distances
+#                  (inverted_d = max_distance - d)
+# nj_attotree    - Neighbor-Joining tree order from attotree; uses attotree sketch distances
+# upgma_attotree - UPGMA tree order from attotree; uses attotree sketch distances
+# nj_hamming     - Neighbor-Joining tree order from quicktree on Hamming distances
+# upgma_hamming  - UPGMA tree order from quicktree on Hamming distances
+# randomized     - deterministic seed-based shuffled order
+orders:
   randomized: true
+  best_tsp: true
+  worst_tsp: true
+  nj_hamming: true
+  nj_attotree: true
+  upgma_hamming: true
+  upgma_attotree: true
 
-attotree_k: 31
+# --------------------------------------------------------------------
+# Attotree parameters
+# --------------------------------------------------------------------
+# Passed to every `attotree` invocation as `-k` and `-s`.
+# Changing these changes attotree's output, so prior results become invalid.
+attotree_k: 21
 attotree_s: 10000
+

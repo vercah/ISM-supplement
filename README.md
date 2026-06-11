@@ -11,6 +11,7 @@
         * [Minigono example](#minigono-example)
         * [Using your own data](#using-your-own-data)
     * [Step 2: Configure pipeline parameters](#step-2-configure-pipeline-parameters)
+        * [Output order names](#output-order-names)
     * [Step 3: Run the pipeline](#step-3-run-the-pipeline)
 * [Precomputed results](#precomputed-results)
 * [Pipeline workarounds and implementation notes](#pipeline-workarounds-and-implementation-notes)
@@ -37,7 +38,7 @@ BibTeX:
   author = {Veronika Hendrychová and Karel Břinda},
   title = {Why phylogenies compress so well: combinatorial guarantees under the Infinite Sites Model},
   journal = {bioRxiv},
-  volumen = {2026.03.18.712055},
+  volume = {2026.03.18.712055},
   year = {2026},
   doi = {10.64898/2026.03.18.712055},
   url = {https://doi.org/10.64898/2026.03.18.712055}
@@ -139,25 +140,48 @@ Any dataset `.txt` file present in `01_datasets/` will be picked up automaticall
 Edit the single workflow config file `pipeline/config.yaml`. This is the only intended user-facing pipeline config file.
 
 ```yaml
+# ====================================================================
+# Pipeline configuration
+# ====================================================================
+# The Snakefile loads this file via `configfile:` and validates every
+# setting at startup. Unknown keys under any mapping are rejected.
+# All bool-maps require at least one entry to be true.
+# ====================================================================
+
+# k-mer sizes to build Fulgor indices for.
 kmer_sizes:
   - 31
 
+# Seed for every deterministic shuffle step:
+# initial dataset randomization and the `randomized` baseline order.
 random_seed: 1
 
+# Geometric subsampling density for automatically derived N values.
+#
+# 0 - evaluate only the full dataset size.
+# 1 - evaluate approximately one value per decade: 1, 10, 100, ...
+# 2 - evaluate approximately two values per decade: 1, 3, 10, 32, ...
+#
+# The full dataset size is always included.
 sampling_conf: 0
 
+# Matrix types to build from the Fulgor dump.
 matrices:
   kmer: true
   unitig: true
   uniqrow: true
 
-outputs:
+# Genome orders to generate and evaluate.
+orders:
   best_tsp: true
   worst_tsp: true
   nj_attotree: true
   upgma_attotree: true
+  nj_hamming: true
+  upgma_hamming: true
   randomized: true
 
+# Passed to every `attotree` invocation as `-k` and `-s`.
 attotree_k: 31
 attotree_s: 10000
 ```
@@ -168,8 +192,8 @@ Configuration keys:
 - **`random_seed`** — base seed controlling reproducible dataset shuffling and randomized output ordering
 - **`sampling_conf`** — geometric subsampling density for automatically derived `N` values
 - **`matrices`** — enable or disable the `kmer`, `unitig`, and `uniqrow` matrix families
-- **`outputs`** — enable or disable the final ordering families:
-  `best_tsp`, `worst_tsp`, `nj_attotree`, `upgma_attotree`, `randomized`
+- **`orders`** — enable or disable the final ordering families:
+  `best_tsp`, `worst_tsp`, `nj_attotree`, `upgma_attotree`, `nj_hamming`, `upgma_hamming`, `randomized`
 - **`attotree_k`** — attotree k-mer size passed as `attotree -k`
 - **`attotree_s`** — attotree sketch size passed as `attotree -s`
 
@@ -185,10 +209,10 @@ Selections remain nested: `02_order_randomization/{dataset}.txt` is the reproduc
 
 Two common edits:
 
-Disable worst-case TSP outputs:
+Disable worst-case TSP orders:
 
 ```yaml
-outputs:
+orders:
   worst_tsp: false
 ```
 
@@ -201,6 +225,30 @@ matrices:
 
 The pipeline generates results for the Cartesian product of the enabled settings across all auto-detected dataset files in `01_datasets/`. `N_values` are derived automatically from the number of lines in each dataset file and the `sampling_conf` setting.
 
+### Output order names
+
+The `method` column in `final_data.tsv` and the method component in filenames use the following order tokens:
+
+| Method token | Meaning | Source distances |
+|---|---|---|
+| `optimal` | Minimum-runs ordering from Concorde TSP | Pipeline Hamming distances |
+| `worst` | Maximum-runs ordering from Concorde TSP on inverted distances | Pipeline Hamming distances |
+| `randomized` | Deterministic seed-based random ordering | None |
+| `nj-attotree` | Neighbor-Joining tree order from `attotree` | AttoTree sketch distances from FASTA files |
+| `upgma-attotree` | UPGMA tree order from `attotree` | AttoTree sketch distances from FASTA files |
+| `nj-hamming` | Neighbor-Joining tree order from `quicktree` | Pipeline Hamming distance matrix |
+| `upgma-hamming` | UPGMA tree order from `quicktree` | Pipeline Hamming distance matrix |
+
+The final per-run filename pattern is:
+
+```text
+10_runs/{dataset}_{method}_k{k}_N{N}_{type}.runs
+```
+
+where `{type}` is one of `kmer`, `unitig`, or `uniqrow`.
+
+Use hyphens, not underscores, inside method tokens. Underscores delimit fields in generated filenames.
+
 ### Step 3: Run the pipeline
 
 After editing `pipeline/config.yaml`, run the pipeline through `make` from `pipeline/`:
@@ -210,7 +258,7 @@ cd pipeline
 make
 ```
 
-Per-order run results will be generated in the `10_runs/` directory. The aggregate TSV is generated as `11_final_data.tsv`.
+Per-order run results will be generated in the `10_runs/` directory. The aggregate run-count TSV is generated as `final_data.tsv`, and the aggregated timing TSV is generated as `final_time.tsv`.
 
 ## Precomputed results
 
@@ -229,11 +277,11 @@ Concorde solves the *cycle* version of TSP, but the pipeline needs a *path*. To 
 
 #### Padding small instances by duplicating the first genome
 
-For instances with fewer than 35 nodes, Concorde switches internally to a Held-Karp dynamic-programming routine (`CCheldkarp_small`) that imposes strict limits on edge-weight magnitude, which can cause solver failures. To force Concorde onto its general branch-and-cut code path, the pipeline pads the instance by repeating the first real genome until the total number of nodes reaches 35 (`_export_tsp_instance.py`). Each copy has zero distance to itself and to other copies, and inherits the original genome's distances to all other real nodes. In any optimal tour, the copies therefore cluster together as consecutive neighbors and can be collapsed back into a single node after solving, recovering the original ordering (`_extract_path_from_tsp_solution.py`). Importantly, the duplicated node must be a real genome, not the dummy separator node — duplicating the separator would create additional zero-cost "teleportation" shortcuts between arbitrary points in the tour, distorting the optimal path.
+For instances with fewer than 35 nodes, Concorde switches internally to a Held-Karp dynamic-programming routine (`CCheldkarp_small`) that imposes strict limits on edge-weight magnitude, which can cause solver failures. To force Concorde onto its general branch-and-cut code path, for small selected sets the pipeline repeats the first real genome until the final TSP instance, including the dummy separator node, has at least 35 nodes (`_export_tsp_instance.py`). Each copy has zero distance to itself and to other copies, and inherits the original genome's distances to all other real nodes. In any optimal tour, the copies therefore cluster together as consecutive neighbors and can be collapsed back into a single node after solving, recovering the original ordering (`_extract_path_from_tsp_solution.py`). Importantly, the duplicated node must be a real genome, not the dummy separator node -- duplicating the separator would create additional zero-cost "teleportation" shortcuts between arbitrary points in the tour, distorting the optimal path.
 
 #### Distance scaling to prevent arithmetic overflow
 
-When maximum pairwise Hamming distances exceed 10,000, the resulting optimal tour lengths can overflow Concorde's internal integer arithmetic (error `OVERFLOW in CCbigguy_addmult`). To prevent this, when any of the computed distances is `max_dist > 10000`, the pipeline uniformly scales all distances: `d' = max(1, round(d / (max_dist / 10000)))` (`_export_tsp_instance.py`). The `max(1, ...)` floor ensures no positive distance collapses to zero. This approximation may merge close distances into the same integer, but does not significantly affect results given the large original range.
+When maximum pairwise Hamming distances exceed 10,000, the resulting optimal tour lengths can overflow Concorde's internal integer arithmetic (error `OVERFLOW in CCbigguy_addmult`). To prevent this, when any of the computed distances is `max_dist > 10000`, the pipeline uniformly scales positive distances as `d' = max(1, round(d / (max_dist / 10000)))` and leaves zero distances unchanged (`_export_tsp_instance.py`). The `max(1, ...)` floor ensures no positive distance collapses to zero. This approximation may merge close distances into the same integer, but does not significantly affect results given the large original range.
 
 #### Worst-case instance by distance inversion
 
@@ -242,17 +290,13 @@ To find the *worst* (maximum-runs) ordering using Concorde's minimization, all d
 
 ### Phylogenetic tree inference and ordering extraction
 
-#### Tree construction with attotree
+The pipeline evaluates two independent tree-based ordering families.
 
-Trees are inferred by [attotree](https://github.com/karel-brinda/attotree) directly from the genome FASTA files (not from the Hamming distance matrices used for TSP). The pipeline evaluates two methods: **Neighbor-Joining (NJ)** and **UPGMA**, passed via the `-m` flag (`Snakefile`). Attotree computes its own sketch-based (Mash) distances internally.
+The `nj-attotree` and `upgma-attotree` orders run `attotree` directly on the selected genome FASTA files. These orders do not use the Hamming distance matrices generated by the pipeline; `attotree` computes its own sketch-based distances internally. The method passed to `attotree -m` is `nj` or `upgma`.
 
-#### No rooting, ladderization, or polytomy resolution applied
+The `nj-hamming` and `upgma-hamming` orders first convert the selected pairwise Hamming distance matrix to PHYLIP format with `_dists_to_phylip.py`, then run `quicktree` on that matrix. The `upgma-hamming` order passes `-upgma` to `quicktree`; the `nj-hamming` order uses quicktree's Neighbor-Joining mode.
 
-The tree postprocessing script (`_postprocess_tree.py`) *supports* midpoint rooting (`--midpoint-outgroup`), ladderization (`--ladderize`), and polytomy resolution (`--standardize`), but none of these are used in the pipeline and our experiments. This means the genome ordering is the raw leaf order from ete3's default tree traversal of the unmodified attotree output.
-
-#### Python recursion limit raised to 500,000
-
-Large phylogenetic trees cause deep recursion in ete3's traversal routines. The default Python recursion limit (1,000) is insufficient, so it is raised to 500,000 (`_postprocess_tree.py`).
+For both tree families, the final genome order is the left-to-right leaf order extracted from the Newick tree by `_tree_leaf_order.py`. The pipeline does not apply rooting, leaf-order normalization, or multifurcation resolution.
 
 
 ### Fulgor indexing
@@ -260,6 +304,10 @@ Large phylogenetic trees cause deep recursion in ete3's traversal routines. The 
 #### File descriptor limit
 
 Fulgor may open many files simultaneously during index construction. The pipeline raises the soft file-descriptor limit to 4,096 before calling `fulgor build` (`Snakefile`).
+
+#### Distance-builder wrapper
+
+The workflow calls `pipeline/_build_dists`. This file is a symlink created by `make` and points to the compiled Rust v6 implementation at `pipeline/_build_dists_v6/_build_dists_v6`.
 
 
 ### Randomized ordering

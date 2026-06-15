@@ -8,7 +8,18 @@
 
 # k-mer sizes to build Fulgor indices for.
 kmer_sizes:
+  - 11
+  - 13
+  - 15
+  - 17
+  - 19
+  - 21
+  - 23
+  - 25
+  - 27
+  - 29
   - 31
+
 
 # Seed for every deterministic shuffle step:
 # initial dataset randomization and the `randomized` baseline order.

@@ -112,6 +112,7 @@ random_seed = parse_config_int("random_seed", 1)
 sampling_conf = parse_config_nonneg_int("sampling_conf", 0)
 max_fulgor_instances = parse_config_pos_int("max_fulgor_instances", 1)
 max_fulgor_memory_gib = parse_config_pos_int("max_fulgor_memory_gib", 12)
+max_fulgor_threads = parse_config_pos_int("max_fulgor_threads", 30)
 matrix_types = [matrix for matrix in KNOWN_MATRIX_TYPES if matrix_flags[matrix]]
 disabled_matrix_types = [
     matrix for matrix in KNOWN_MATRIX_TYPES if not matrix_flags[matrix]
@@ -198,7 +199,7 @@ rule s04_generate_fulgor_index:
     output:
         fur="04_indices/{dataset}_k{k}.fur",
         time="04_indices/{dataset}_k{k}.fur.time",
-    threads: 8
+    threads: max_fulgor_threads
     resources:
         fulgor_instances=1,
     params:

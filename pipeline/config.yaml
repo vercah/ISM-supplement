@@ -56,6 +56,9 @@ max_fulgor_instances: 1
 # Maximum memory for each Fulgor build, passed to `fulgor build -g` in GiB.
 max_fulgor_memory_gib: 12
 
+# Number of threads for each Fulgor build, passed to `fulgor build -t`.
+max_fulgor_threads: 30
+
 # --------------------------------------------------------------------
 # Matrix types
 # --------------------------------------------------------------------

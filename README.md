@@ -165,6 +165,15 @@ random_seed: 1
 # The full dataset size is always included.
 sampling_conf: 0
 
+# Maximum number of Fulgor build/dump processes allowed to run concurrently.
+max_fulgor_instances: 1
+
+# Maximum memory for each Fulgor build, passed to `fulgor build -g` in GiB.
+max_fulgor_memory_gib: 12
+
+# Number of threads for each Fulgor build, passed to `fulgor build -t`.
+max_fulgor_threads: 30
+
 # Matrix types to build from the Fulgor dump.
 matrices:
   kmer: true
@@ -191,6 +200,9 @@ Configuration keys:
 - **`kmer_sizes`** — list of k-mer sizes to evaluate
 - **`random_seed`** — base seed controlling reproducible dataset shuffling and randomized output ordering
 - **`sampling_conf`** — geometric subsampling density for automatically derived `N` values
+- **`max_fulgor_instances`** — maximum number of Fulgor build/dump processes allowed to run concurrently
+- **`max_fulgor_memory_gib`** — memory limit in GiB passed to each Fulgor build with `fulgor build -g`
+- **`max_fulgor_threads`** — thread count passed to each Fulgor build with `fulgor build -t`
 - **`matrices`** — enable or disable the `kmer`, `unitig`, and `uniqrow` matrix families
 - **`orders`** — enable or disable the final ordering families:
   `best_tsp`, `worst_tsp`, `nj_attotree`, `upgma_attotree`, `nj_hamming`, `upgma_hamming`, `randomized`

@@ -6,12 +6,15 @@ SHELL=/usr/bin/env bash -eo pipefail
 
 .SUFFIXES:
 
+MAX_FULGOR_INSTANCES_CONFIG := $(shell awk '$$1 == "max_fulgor_instances:" { print $$2; exit }' config.yaml)
+MAX_FULGOR_INSTANCES ?= $(or $(MAX_FULGOR_INSTANCES_CONFIG),1)
+
 ##############
 ## Commands ##
 ##############
 
 all: _build_dists
-	snakemake -p -c all --rerun-incomplete --keep-going --show-failed-logs
+	snakemake -p -c all --resources fulgor_instances=$(MAX_FULGOR_INSTANCES) --rerun-incomplete --keep-going --show-failed-logs
 
 _build_dists: _build_dists_v6/Cargo.toml _build_dists_v6/Cargo.lock _build_dists_v6/src/*.rs _build_dists_v6/Makefile ## Compile and link the workflow distance builder
 	$(MAKE) -C _build_dists_v6 _build_dists_v6

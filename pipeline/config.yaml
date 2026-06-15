@@ -50,6 +50,9 @@ random_seed: 1
 # The full dataset size is always included.
 sampling_conf: 0
 
+# Maximum number of Fulgor build/dump processes allowed to run concurrently.
+max_fulgor_instances: 1
+
 # --------------------------------------------------------------------
 # Matrix types
 # --------------------------------------------------------------------
@@ -95,4 +98,3 @@ orders:
 # Changing these changes attotree's output, so prior results become invalid.
 attotree_k: 21
 attotree_s: 10000
-

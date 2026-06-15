@@ -111,6 +111,7 @@ kmer_sizes = config.get("kmer_sizes", [31])
 random_seed = parse_config_int("random_seed", 1)
 sampling_conf = parse_config_nonneg_int("sampling_conf", 0)
 max_fulgor_instances = parse_config_pos_int("max_fulgor_instances", 1)
+max_fulgor_memory_gib = parse_config_pos_int("max_fulgor_memory_gib", 12)
 matrix_types = [matrix for matrix in KNOWN_MATRIX_TYPES if matrix_flags[matrix]]
 disabled_matrix_types = [
     matrix for matrix in KNOWN_MATRIX_TYPES if not matrix_flags[matrix]
@@ -202,7 +203,7 @@ rule s04_generate_fulgor_index:
         fulgor_instances=1,
     params:
         minimizer_size=lambda wc: min(20, int(wc.k) - 2),
-        ram_gib=12,
+        ram_gib=max_fulgor_memory_gib,
         experiment=lambda wc: f"s04_generate_fulgor_index_{wc.dataset}_k{wc.k}",
     shell:
         """

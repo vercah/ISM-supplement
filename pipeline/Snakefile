@@ -61,6 +61,15 @@ def parse_config_nonneg_int(name, default):
     return value
 
 
+def parse_config_pos_int(name, default):
+    value = config.get(name, default)
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError(
+            f"Config key '{name}' must be a positive integer, not {value!r}."
+        )
+    return value
+
+
 def compute_sample_sizes(total_genomes, sampling_conf):
     if total_genomes < 1:
         raise ValueError(f"Dataset size must be >= 1, got {total_genomes}")
@@ -101,6 +110,9 @@ order_flags = resolve_enabled_flags(
 kmer_sizes = config.get("kmer_sizes", [31])
 random_seed = parse_config_int("random_seed", 1)
 sampling_conf = parse_config_nonneg_int("sampling_conf", 0)
+max_fulgor_instances = parse_config_pos_int("max_fulgor_instances", 1)
+max_fulgor_memory_gib = parse_config_pos_int("max_fulgor_memory_gib", 12)
+max_fulgor_threads = parse_config_pos_int("max_fulgor_threads", 30)
 matrix_types = [matrix for matrix in KNOWN_MATRIX_TYPES if matrix_flags[matrix]]
 disabled_matrix_types = [
     matrix for matrix in KNOWN_MATRIX_TYPES if not matrix_flags[matrix]
@@ -187,10 +199,12 @@ rule s04_generate_fulgor_index:
     output:
         fur="04_indices/{dataset}_k{k}.fur",
         time="04_indices/{dataset}_k{k}.fur.time",
-    threads: 8
+    threads: max_fulgor_threads
+    resources:
+        fulgor_instances=1,
     params:
         minimizer_size=lambda wc: min(20, int(wc.k) - 2),
-        ram_gib=12,
+        ram_gib=max_fulgor_memory_gib,
         experiment=lambda wc: f"s04_generate_fulgor_index_{wc.dataset}_k{wc.k}",
     shell:
         """
@@ -218,6 +232,8 @@ rule s05_dump_fulgor_files:
         meta="05_dumps/{dataset}_k{k}.metadata.txt",
         unitigs="05_dumps/{dataset}_k{k}.unitigs.fa",
         time="05_dumps/{dataset}_k{k}.dump.time",
+    resources:
+        fulgor_instances=1,
     params:
         prefix="04_indices/{dataset}_k{k}",
         experiment=lambda wc: f"s05_dump_fulgor_files_{wc.dataset}_k{wc.k}",

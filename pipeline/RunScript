@@ -1,5 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+max_fulgor_instances="$(
+    awk '
+        $1 == "max_fulgor_instances:" {
+            value = $2
+            sub(/#.*/, "", value)
+            print value
+            found = 1
+            exit
+        }
+        END {
+            if (!found) {
+                print 1
+            }
+        }
+    ' config.yaml
+)"
+
 ulimit -n 4096
-snakemake -j 32 --resources concurrency=1 --latency-wait 30 --rerun-incomplete --keep-going --show-failed-logs --use-conda
+snakemake -j 32 --resources fulgor_instances="$max_fulgor_instances" --latency-wait 30 --rerun-incomplete --keep-going --show-failed-logs --use-conda

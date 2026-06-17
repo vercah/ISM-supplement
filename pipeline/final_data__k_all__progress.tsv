@@ -20,6 +20,9 @@ diverse	nj-attotree	15	1000	unitig	5210025082	5670248721	5215139866
 diverse	nj-attotree	17	1000	kmer	5842199529	7653866973	5847580494
 diverse	nj-attotree	17	1000	uniqrow	1556505762	1701958069	1557496642
 diverse	nj-attotree	17	1000	unitig	4577595997	5812060972	4581618348
+diverse	nj-attotree	18	1000	kmer	119441314	157978053	119534624
+diverse	nj-attotree	18	1000	uniqrow	31674095	35583815	31689580
+diverse	nj-attotree	18	1000	unitig	92825375	119909032	92892772
 diverse	nj-attotree	19	1000	kmer	6012049428	8594577293	6017463004
 diverse	nj-attotree	19	1000	uniqrow	285358383	316763930	285466912
 diverse	nj-attotree	19	1000	unitig	1725940913	2305221757	1727068110
@@ -86,6 +89,9 @@ diverse	nj-hamming	15	1000	unitig	5141969549	5602193188	5145556932
 diverse	nj-hamming	17	1000	kmer	5782056733	7593724177	5784721140
 diverse	nj-hamming	17	1000	uniqrow	1526929973	1672382280	1527491966
 diverse	nj-hamming	17	1000	unitig	4524959444	5759424419	4527743770
+diverse	nj-hamming	18	1000	kmer	117882401	156419140	117934064
+diverse	nj-hamming	18	1000	uniqrow	30975355	34885075	30989244
+diverse	nj-hamming	18	1000	unitig	91533586	118617243	91579780
 diverse	nj-hamming	19	1000	kmer	5955097271	8537625136	5959070212
 diverse	nj-hamming	19	1000	uniqrow	277559168	308964715	277648636
 diverse	nj-hamming	19	1000	unitig	1699638670	2278919514	1700394958
@@ -152,6 +158,9 @@ diverse	optimal	15	1000	unitig	5094122526	5554346165	5112155120
 diverse	optimal	17	1000	kmer	5736221567	7547889011	5758351236
 diverse	optimal	17	1000	uniqrow	1508079688	1653531995	1516777844
 diverse	optimal	17	1000	unitig	4486763200	5721228175	4505561404
+diverse	optimal	18	1000	kmer	116844133	155380872	117433904
+diverse	optimal	18	1000	uniqrow	30562197	34471917	30768880
+diverse	optimal	18	1000	unitig	90677107	117760764	91184380
 diverse	optimal	19	1000	kmer	5912066214	8494594079	5935469852
 diverse	optimal	19	1000	uniqrow	272993391	304398938	275094272
 diverse	optimal	19	1000	unitig	1682153995	2261434839	1692723498
@@ -218,6 +227,9 @@ diverse	randomized	15	1000	unitig	7561451850	8021675489	7573569598
 diverse	randomized	17	1000	kmer	8131525162	9943192606	8144653034
 diverse	randomized	17	1000	uniqrow	2356482119	2501934426	2360394966
 diverse	randomized	17	1000	unitig	6439266187	7673731162	6449806692
+diverse	randomized	18	1000	kmer	168908384	207445123	169191000
+diverse	randomized	18	1000	uniqrow	48680636	52590356	48762118
+diverse	randomized	18	1000	unitig	131605778	158689435	131834562
 diverse	randomized	19	1000	kmer	8227339551	10809867416	8240630540
 diverse	randomized	19	1000	uniqrow	468642023	500047570	469380506
 diverse	randomized	19	1000	unitig	2481187777	3060468621	2485439770
@@ -284,6 +296,9 @@ diverse	upgma-attotree	15	1000	unitig	5142554878	5602778517	5152908816
 diverse	upgma-attotree	17	1000	kmer	5775576984	7587244428	5786330110
 diverse	upgma-attotree	17	1000	uniqrow	1527866822	1673319129	1529065484
 diverse	upgma-attotree	17	1000	unitig	4521352731	5755817706	4528661988
+diverse	upgma-attotree	18	1000	kmer	117870879	156407618	118017414
+diverse	upgma-attotree	18	1000	uniqrow	31012843	34922563	31028558
+diverse	upgma-attotree	18	1000	unitig	91546963	118630620	91645844
 diverse	upgma-attotree	19	1000	kmer	5949177710	8531705575	5959975536
 diverse	upgma-attotree	19	1000	uniqrow	277793491	309199038	277883680
 diverse	upgma-attotree	19	1000	unitig	1699971410	2279252254	1701464848
@@ -350,6 +365,9 @@ diverse	upgma-hamming	15	1000	unitig	5393056945	5853280584	5406853032
 diverse	upgma-hamming	17	1000	kmer	5948698676	7760366120	5963786770
 diverse	upgma-hamming	17	1000	uniqrow	1613327728	1758780035	1619080322
 diverse	upgma-hamming	17	1000	unitig	4666381181	5900846156	4679266660
+diverse	upgma-hamming	18	1000	kmer	122082544	160619283	122461548
+diverse	upgma-hamming	18	1000	uniqrow	33174499	37084219	33298102
+diverse	upgma-hamming	18	1000	unitig	95198932	122282589	95518250
 diverse	upgma-hamming	19	1000	kmer	6107518708	8690046573	6123089516
 diverse	upgma-hamming	19	1000	uniqrow	302519263	333924810	303681928
 diverse	upgma-hamming	19	1000	unitig	1778149415	2357430259	1784588378
@@ -398,6 +416,9 @@ diverse	upgma-hamming	8	1000	unitig	304686	337582	309604
 diverse	worst	10	1000	kmer	169102275	169627075	169118542
 diverse	worst	10	1000	uniqrow	169101321	169625727	169117588
 diverse	worst	10	1000	unitig	169102155	169626955	169118422
+diverse	worst	11	1000	kmer	1179865430	1181962582	1180615692
+diverse	worst	11	1000	uniqrow	1179865708	1181962835	1180615970
+diverse	worst	11	1000	unitig	1179865430	1181962582	1180615692
 diverse	worst	12	1000	kmer	3454134954	3462525610	3455701328
 diverse	worst	12	1000	uniqrow	3454134002	3462524642	3455700376
 diverse	worst	12	1000	unitig	3454133736	3462524392	3455700110
@@ -413,6 +434,9 @@ diverse	worst	15	1000	unitig	7744110518	8204334157	7744700740
 diverse	worst	17	1000	kmer	8184329846	9995997290	8184923704
 diverse	worst	17	1000	uniqrow	2389748362	2535200669	2389911542
 diverse	worst	17	1000	unitig	6486712230	7721177205	6487175484
+diverse	worst	18	1000	kmer	169858001	208394740	169869814
+diverse	worst	18	1000	uniqrow	49205482	53115202	49208272
+diverse	worst	18	1000	unitig	132411862	159495519	132421240
 diverse	worst	19	1000	kmer	8258312010	10840839875	8258906452
 diverse	worst	19	1000	uniqrow	474636370	506041917	474650130
 diverse	worst	19	1000	unitig	2494764976	3074045820	2494928494
@@ -439,6 +463,7 @@ diverse	worst	27	1000	uniqrow	40271450	42392813	40271910
 diverse	worst	27	1000	unitig	253125952	298060946	253128332
 diverse	worst	28	1000	kmer	8292948051	11263027303	8293543198
 diverse	worst	28	1000	uniqrow	38965883	40997949	38966278
+diverse	worst	28	1000	unitig	240152631	281659737	240154522
 diverse	worst	29	1000	kmer	8294551578	11278434850	8295146766
 diverse	worst	29	1000	uniqrow	36802479	38717668	36802818
 diverse	worst	29	1000	unitig	230274101	270049614	230275732
@@ -526,6 +551,9 @@ ngono-spneumo	nj-attotree	31	1000	unitig	9546328	10152100	9546994
 ngono-spneumo	nj-attotree	6	1000	kmer	0	2080	0
 ngono-spneumo	nj-attotree	6	1000	uniqrow	0	1	0
 ngono-spneumo	nj-attotree	6	1000	unitig	0	2080	0
+ngono-spneumo	nj-attotree	7	1000	kmer	0	8192	0
+ngono-spneumo	nj-attotree	7	1000	uniqrow	0	1	0
+ngono-spneumo	nj-attotree	7	1000	unitig	0	8192	0
 ngono-spneumo	nj-attotree	8	1000	kmer	7400	40296	7400
 ngono-spneumo	nj-attotree	8	1000	uniqrow	7174	7591	7174
 ngono-spneumo	nj-attotree	8	1000	unitig	7400	40296	7400
@@ -601,6 +629,9 @@ ngono-spneumo	nj-hamming	31	1000	unitig	9200309	9806081	9203202
 ngono-spneumo	nj-hamming	6	1000	kmer	0	2080	0
 ngono-spneumo	nj-hamming	6	1000	uniqrow	0	1	0
 ngono-spneumo	nj-hamming	6	1000	unitig	0	2080	0
+ngono-spneumo	nj-hamming	7	1000	kmer	0	8192	0
+ngono-spneumo	nj-hamming	7	1000	uniqrow	0	1	0
+ngono-spneumo	nj-hamming	7	1000	unitig	0	8192	0
 ngono-spneumo	nj-hamming	8	1000	kmer	6964	39860	6968
 ngono-spneumo	nj-hamming	8	1000	uniqrow	6762	7179	6762
 ngono-spneumo	nj-hamming	8	1000	unitig	6964	39860	6968
@@ -676,6 +707,9 @@ ngono-spneumo	optimal	31	1000	unitig	8344914	8950686	8590234
 ngono-spneumo	optimal	6	1000	kmer	0	2080	0
 ngono-spneumo	optimal	6	1000	uniqrow	0	1	0
 ngono-spneumo	optimal	6	1000	unitig	0	2080	0
+ngono-spneumo	optimal	7	1000	kmer	0	8192	0
+ngono-spneumo	optimal	7	1000	uniqrow	0	1	0
+ngono-spneumo	optimal	7	1000	unitig	0	8192	0
 ngono-spneumo	optimal	8	1000	kmer	5616	38512	5810
 ngono-spneumo	optimal	8	1000	uniqrow	5476	5893	5632
 ngono-spneumo	optimal	8	1000	unitig	5616	38512	5820
@@ -751,6 +785,9 @@ ngono-spneumo	randomized	31	1000	unitig	150204861	150810633	150283366
 ngono-spneumo	randomized	6	1000	kmer	0	2080	0
 ngono-spneumo	randomized	6	1000	uniqrow	0	1	0
 ngono-spneumo	randomized	6	1000	unitig	0	2080	0
+ngono-spneumo	randomized	7	1000	kmer	0	8192	0
+ngono-spneumo	randomized	7	1000	uniqrow	0	1	0
+ngono-spneumo	randomized	7	1000	unitig	0	8192	0
 ngono-spneumo	randomized	8	1000	kmer	101479	134375	101520
 ngono-spneumo	randomized	8	1000	uniqrow	83557	83974	83598
 ngono-spneumo	randomized	8	1000	unitig	101479	134375	101520
@@ -826,6 +863,9 @@ ngono-spneumo	upgma-attotree	31	1000	unitig	9070280	9676052	9311826
 ngono-spneumo	upgma-attotree	6	1000	kmer	0	2080	0
 ngono-spneumo	upgma-attotree	6	1000	uniqrow	0	1	0
 ngono-spneumo	upgma-attotree	6	1000	unitig	0	2080	0
+ngono-spneumo	upgma-attotree	7	1000	kmer	0	8192	0
+ngono-spneumo	upgma-attotree	7	1000	uniqrow	0	1	0
+ngono-spneumo	upgma-attotree	7	1000	unitig	0	8192	0
 ngono-spneumo	upgma-attotree	8	1000	kmer	7516	40412	7710
 ngono-spneumo	upgma-attotree	8	1000	uniqrow	7259	7676	7414
 ngono-spneumo	upgma-attotree	8	1000	unitig	7516	40412	7710
@@ -901,6 +941,9 @@ ngono-spneumo	upgma-hamming	31	1000	unitig	9000560	9606332	9241156
 ngono-spneumo	upgma-hamming	6	1000	kmer	0	2080	0
 ngono-spneumo	upgma-hamming	6	1000	uniqrow	0	1	0
 ngono-spneumo	upgma-hamming	6	1000	unitig	0	2080	0
+ngono-spneumo	upgma-hamming	7	1000	kmer	0	8192	0
+ngono-spneumo	upgma-hamming	7	1000	uniqrow	0	1	0
+ngono-spneumo	upgma-hamming	7	1000	unitig	0	8192	0
 ngono-spneumo	upgma-hamming	8	1000	kmer	6938	39834	7132
 ngono-spneumo	upgma-hamming	8	1000	uniqrow	6795	7212	6950
 ngono-spneumo	upgma-hamming	8	1000	unitig	6938	39834	7132
@@ -976,6 +1019,9 @@ ngono-spneumo	worst	31	1000	unitig	243981394	244587166	244200744
 ngono-spneumo	worst	6	1000	kmer	0	2080	0
 ngono-spneumo	worst	6	1000	uniqrow	0	1	0
 ngono-spneumo	worst	6	1000	unitig	0	2080	0
+ngono-spneumo	worst	7	1000	kmer	0	8192	0
+ngono-spneumo	worst	7	1000	uniqrow	0	1	0
+ngono-spneumo	worst	7	1000	unitig	0	8192	0
 ngono-spneumo	worst	8	1000	kmer	161677	194573	161798
 ngono-spneumo	worst	8	1000	uniqrow	129140	129557	129232
 ngono-spneumo	worst	8	1000	unitig	161677	194573	161798
